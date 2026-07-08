@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEP — Manufacturing-Linked Wages</title>
+  <style>
+    :root {
+      --bg: #0f172a; --panel: #1e293b; --panel2: #263449;
+      --line: #334155; --text: #e2e8f0; --muted: #94a3b8;
+      --accent: #38bdf8; --green: #22c55e; --amber: #f59e0b; --red: #ef4444; --violet: #a78bfa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+    }
+    header {
+      padding: 24px 32px; border-bottom: 1px solid var(--line);
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+      background: linear-gradient(180deg, #10233f, #0f172a);
+    }
+    header h1 { font-size: 20px; margin: 0; }
+    header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .wrap { max-width: 1150px; margin: 0 auto; padding: 24px 32px 60px; }
+
+    /* gateway strip */
+    .gateway {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px 16px; margin-bottom: 24px; font-size: 13px;
+    }
+    .gateway b { color: var(--accent); }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: var(--panel2); border: 1px solid var(--line);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .dot.up { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.down { background: var(--red); }
+
+    /* kpi cards */
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 14px; margin-bottom: 26px; }
+    .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi .value { font-size: 26px; font-weight: 700; margin-top: 6px; }
+    .kpi .note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 820px) { .grid2 { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .panel .head { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .panel .head h2 { font-size: 15px; margin: 0; }
+    .stack-badge { font-size: 11px; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 3px 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+    tr:last-child td { border-bottom: none; }
+    .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .tag.high { background: rgba(34,197,94,.15); color: #4ade80; }
+    .tag.avg  { background: rgba(245,158,11,.15); color: #fbbf24; }
+    .tag.low  { background: rgba(239,68,68,.15); color: #f87171; }
+
+    .insight {
+      margin-top: 22px; background: linear-gradient(135deg, #1b2b46, #241d40);
+      border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px;
+    }
+    .insight h3 { margin: 0 0 6px; font-size: 15px; }
+    .insight .ai { color: var(--violet); font-weight: 600; }
+    .foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 30px; }
+    .err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>NKTech Enterprise Platform <span style="color:var(--muted);font-weight:400">— Edition 1</span></h1>
+      <div class="sub">Manufacturing-Linked Wages Management &middot; one frontend, two independent services</div>
+    </div>
+    <div class="pill"><span class="dot" id="gw-dot"></span> API Gateway :8080</div>
+  </header>
+
+  <div class="wrap">
+    <!-- Proof: both services live behind one gateway, on different stacks -->
+    <div class="gateway">
+      <span>Served through <b>one API Gateway</b> &rarr;</span>
+      <span class="pill"><span class="dot" id="mfg-dot"></span> Manufacturing <span id="mfg-stack" style="color:var(--muted);font-weight:400"></span></span>
+      <span class="pill"><span class="dot" id="wages-dot"></span> Wages <span id="wages-stack" style="color:var(--muted);font-weight:400"></span></span>
+      <span style="margin-left:auto;color:var(--muted)">Different backends. Same UI.</span>
+    </div>
+
+    <div class="kpis" id="kpis"><div class="kpi"><div class="label">Loading…</div></div></div>
+
+    <div class="grid2">
+      <!-- MANUFACTURING (MERN) -->
+      <div class="panel">
+        <div class="head">
+          <h2>Manufacturing — Production Lines</h2>
+          <span class="stack-badge" id="mfg-badge">MERN</span>
+        </div>
+        <table id="mfg-table"><tbody><tr><td>Loading…</td></tr></tbody></table>
+      </div>
+
+      <!-- WAGES (Laravel) -->
+      <div class="panel">
+        <div class="head">
+          <h2>Wages — Production-Linked Pay</h2>
+          <span class="stack-badge" id="wages-badge">Laravel</span>
+        </div>
+        <table id="wages-table"><tbody><tr><td>Loading…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="insight">
+      <h3>Production-Linked Wage Insight</h3>
+      <div id="insight-body">Combining live data from <b>both</b> services…</div>
+    </div>
+
+    <div class="foot" id="foot"></div>
+  </div>
+
+  <script>
+    const rs = (n) => 'Rs.' + Number(n).toLocaleString('en-IN');
+
+    async function getJSON(path) {
+      const r = await fetch(path);
+      if (!r.ok) throw new Error(path + ' -> ' + r.status);
+      return r.json();
+    }
+
+    function setDot(id, up) {
+      const el = document.getElementById(id);
+      el.className = 'dot ' + (up ? 'up' : 'down');
+    }
+
+    async function load() {
+      // 1) gateway health -> proves both services connected + shows their stacks
+      try {
+        const h = await getJSON('/api/health');
+        setDot('gw-dot', true);
+        const mfg = h.services['/api/manufacturing'] || {};
+        const wg  = h.services['/api/wages'] || {};
+        setDot('mfg-dot', mfg.status === 'ok');
+        setDot('wages-dot', wg.status === 'ok');
+        document.getElementById('mfg-stack').textContent = mfg.stack ? '· ' + mfg.stack : '';
+        document.getElementById('wages-stack').textContent = wg.stack ? '· ' + wg.stack : '';
+        if (mfg.stack) document.getElementById('mfg-badge').textContent = mfg.stack;
+        if (wg.stack) document.getElementById('wages-badge').textContent = wg.stack;
+      } catch (e) { setDot('gw-dot', false); }
+
+      // 2) fetch data from BOTH services (through the gateway)
+      const [mfgSum, mfgLines, wgSum, workers] = await Promise.all([
+        getJSON('/api/manufacturing/summary'),
+        getJSON('/api/manufacturing/lines'),
+        getJSON('/api/wages/summary'),
+        getJSON('/api/wages/workers'),
+      ]);
+
+      // KPI row (mix of both services)
+      const s = wgSum.data, m = mfgSum.data;
+      document.getElementById('kpis').innerHTML = [
+        ['Attendance', s.attendanceRate + '%', 'workforce present'],
+        ['Bags Today', m.totalBagsToday, m.activeLines + ' active lines'],
+        ['Productivity', s.productivity + '%', 'target ' + s.productivityTarget + '%'],
+        ['Avg Cost / Bag', rs(s.avgCostPerBag), 'labour cost'],
+        ['OT Hours', s.otHours, s.otAboveTargetPct + '% above target'],
+        ['Machine Uptime', m.avgMachineUptime + '%', 'avg across lines'],
+      ].map(([l, v, n]) => `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="note">${n}</div></div>`).join('');
+
+      // Manufacturing table
+      document.getElementById('mfg-table').innerHTML =
+        '<thead><tr><th>Line</th><th>Bags</th><th>Target</th><th>Uptime</th><th>Status</th></tr></thead><tbody>' +
+        mfgLines.data.map(r => `<tr><td>${r.line}</td><td>${r.bagsProduced}</td><td>${r.target}</td><td>${r.machineUptime}%</td><td>${r.status}</td></tr>`).join('') +
+        '</tbody>';
+
+      // Wages table
+      const tagClass = (r) => r === 'High' ? 'high' : r === 'Average' ? 'avg' : 'low';
+      document.getElementById('wages-table').innerHTML =
+        '<thead><tr><th>Worker</th><th>Bags/Day</th><th>Wage</th><th>Cost/Bag</th><th>Rating</th></tr></thead><tbody>' +
+        workers.data.map(w => `<tr><td>${w.name}<br><span style="color:var(--muted);font-size:11px">${w.line} · ${w.shift}</span></td><td>${w.bagsPerDay}</td><td>${rs(w.wagePerDay)}</td><td>${rs(w.costPerBag)}</td><td><span class="tag ${tagClass(w.rating)}">${w.rating}</span></td></tr>`).join('') +
+        '</tbody>';
+
+      // Combined insight — data from BOTH services in one place
+      const best = workers.data.reduce((a, b) => a.costPerBag < b.costPerBag ? a : b);
+      const worst = workers.data.reduce((a, b) => a.costPerBag > b.costPerBag ? a : b);
+      document.getElementById('insight-body').innerHTML =
+        `Across <b>${m.totalBagsToday} bags</b> today, labour cost averages <b>${rs(s.avgCostPerBag)}/bag</b>. ` +
+        `Most efficient: <b>${best.name}</b> at ${rs(best.costPerBag)}/bag; needs review: <b>${worst.name}</b> at ${rs(worst.costPerBag)}/bag. ` +
+        `Estimated monthly saving ${rs(s.monthlySavingsMin)}–${rs(s.monthlySavingsMax)}.<br>` +
+        `<span class="ai">AI &rarr; ${s.aiRecommendation}</span>`;
+
+      document.getElementById('foot').textContent =
+        'Manufacturing data came from the MERN service, wages data from the Laravel service — unified by the gateway into this single page.';
+    }
+
+    load().catch(e => {
+      document.getElementById('kpis').innerHTML = `<div class="kpi"><div class="label err">Error</div><div class="note err">${e.message}. Is the gateway running? (node start.js)</div></div>`;
+    });
+  </script>
+</body>
+</html>
