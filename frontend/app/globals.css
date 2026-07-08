@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --bg-navy-rgb: 7 23 38;
+    --bg-navy-50: #0a2540;
+    --bg-navy-100: #081B2F;
+    --bg-navy-200: #0D2238;
+    --bg-navy-300: #112d4e;
+    --bg-navy-400: #163a64;
+    --bg-navy-500: #1b477a;
+    --bg-sidebar-rgb: 8 27 47;
+    --bg-card-rgb: 13 34 56;
+    --color-primary: #2563EB;
+    --color-success: #22C55E;
+    --color-warning: #F59E0B;
+    --color-purple: #8B5CF6;
+    --color-danger: #EF4444;
+    --color-muted-rgb: 148 163 184;
+    --color-border-rgb: 30 58 95;
+    --text-white-rgb: 255 255 255;
+  }
+
+  [data-theme="light"] {
+    --bg-navy-rgb: 248 250 252;
+    --bg-navy-50: #f1f5f9;
+    --bg-navy-100: #cbd5e1;
+    --bg-navy-200: #ffffff;
+    --bg-navy-300: #94a3b8;
+    --bg-navy-400: #64748b;
+    --bg-navy-500: #475569;
+    --bg-sidebar-rgb: 255 255 255;
+    --bg-card-rgb: 255 255 255;
+    --color-muted-rgb: 100 116 139;
+    --color-border-rgb: 226 232 240;
+    --text-white-rgb: 15 23 42;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-navy text-white font-sans antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-navy-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-navy-400;
+  }
+}
+
+@layer components {
+  /* Glass card effect */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border border-border/50 rounded-2xl;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+
+  .glass-card-hover:hover {
+    @apply border-border shadow-glow;
+    transform: translateY(-2px);
+  }
+
+  /* Sidebar styles */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+           text-muted transition-all duration-300 ease-in-out cursor-pointer
+           outline-none focus-visible:ring-2 focus-visible:ring-primary/50;
+  }
+
+  .sidebar-item:hover {
+    @apply bg-white/5 text-white shadow-sm;
+  }
+
+  .sidebar-item.active {
+    @apply bg-primary/10 text-primary border border-primary/10 shadow-sm font-semibold;
+  }
+
+  .sidebar-item-child {
+    @apply flex items-center gap-3 pl-11 pr-3 py-2 rounded-lg text-sm
+           text-muted/85 transition-all duration-300 ease-in-out cursor-pointer
+           outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
+  }
+
+  .sidebar-item-child:hover {
+    @apply text-white bg-white/5 shadow-sm;
+  }
+
+  .sidebar-item-child.active {
+    @apply text-primary bg-primary/5 font-semibold;
+  }
+
+  /* KPI card variations */
+  .kpi-icon-blue {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .kpi-icon-green {
+    @apply bg-success/10 text-success;
+  }
+
+  .kpi-icon-orange {
+    @apply bg-warning/10 text-warning;
+  }
+
+  .kpi-icon-purple {
+    @apply bg-purple/10 text-purple;
+  }
+
+  .kpi-icon-red {
+    @apply bg-danger/10 text-danger;
+  }
+
+  /* Badge variants */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply badge bg-success/15 text-success-light;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning/15 text-warning-light;
+  }
+
+  .badge-danger {
+    @apply badge bg-danger/15 text-danger-light;
+  }
+
+  .badge-info {
+    @apply badge bg-primary/15 text-primary-light;
+  }
+
+  /* Tooltip */
+  .tooltip-trigger {
+    @apply relative;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple;
+  }
+
+  /* Shimmer loading */
+  .shimmer {
+    @apply relative overflow-hidden;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
