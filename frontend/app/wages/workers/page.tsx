@@ -1,30 +1,28 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Users } from "lucide-react";
+import { ModulePage } from "@/components/factory/module-page";
 
 export default function WorkersPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Workers"
-        description="Manage worker profiles, assignments, shift schedules, production-linked performance, and efficiency ratings."
-        breadcrumbs={[
-          { label: "Wages", href: "/wages/dashboard" },
-          { label: "Workers" },
-        ]}
-      />
-      <EmptyState
-        title="Workers Profile Directory"
-        description="Access structural profile cards for every line operator. Log efficiency categories (High/Avg/Low) and shift history."
-        moduleName="Wages"
-        icon={Users}
-        features={[
-          "Worker registration & profiles",
-          "Assigned line shifts & logs",
-          "Performance rating cards",
-          "Direct bank details verification",
-        ]}
-      />
-    </div>
+    <ModulePage
+      title="Workers"
+      description="Worker profiles from the MWMS wages service — shift, line, latest output, wage rate and production-linked cost per bag."
+      breadcrumbs={[
+        { label: "Wages", href: "/wages/dashboard" },
+        { label: "Workers" },
+      ]}
+      endpoint="/wages/workers"
+      readOnly
+      columns={[
+        { key: "workerId", label: "Worker ID" },
+        { key: "name", label: "Name" },
+        { key: "shift", label: "Shift" },
+        { key: "line", label: "Line" },
+        { key: "attendance", label: "Attendance" },
+        { key: "bagsPerDay", label: "Bags / Day" },
+        { key: "wagePerDay", label: "Wage / Day (₹)" },
+        { key: "costPerBag", label: "Cost / Bag (₹)" },
+        { key: "machineHours", label: "Machine Hrs" },
+        { key: "rating", label: "Rating" },
+      ]}
+    />
   );
 }

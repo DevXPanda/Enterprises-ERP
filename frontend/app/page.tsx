@@ -30,21 +30,56 @@ import { ProgressRing } from "@/components/dashboard/progress-ring";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, getStatusBgColor } from "@/lib/utils";
 
+import { useEffect, useState } from "react";
+import { apiGet } from "@/lib/api";
 import {
-  kpiData,
-  productionTrend,
-  revenueTrend,
-  profitTrend,
-  monthlyPerformance,
-  factoryComparison,
-  dealerOrders,
-  purchasePending,
-  cashCollection,
-  recentAlerts,
-  qcAlerts,
-  lowStockItems,
-  notifications,
+  kpiData as staticKpis,
+  productionTrend as staticProductionTrend,
+  revenueTrend as staticRevenueTrend,
+  profitTrend as staticProfitTrend,
+  monthlyPerformance as staticMonthlyPerformance,
+  factoryComparison as staticFactoryComparison,
+  dealerOrders as staticDealerOrders,
+  purchasePending as staticPurchasePending,
+  cashCollection as staticCashCollection,
+  recentAlerts as staticRecentAlerts,
+  qcAlerts as staticQcAlerts,
+  lowStockItems as staticLowStockItems,
+  notifications as staticNotifications,
 } from "@/data/dashboard-data";
+
+/** Shape of GET /api/dashboard — mirrors the static dashboard data. */
+interface DashboardData {
+  kpis: typeof staticKpis;
+  productionTrend: typeof staticProductionTrend;
+  revenueTrend: typeof staticRevenueTrend;
+  profitTrend: typeof staticProfitTrend;
+  monthlyPerformance: typeof staticMonthlyPerformance;
+  factoryComparison: typeof staticFactoryComparison;
+  dealerOrders: typeof staticDealerOrders;
+  purchasePending: typeof staticPurchasePending;
+  cashCollection: typeof staticCashCollection;
+  recentAlerts: typeof staticRecentAlerts;
+  qcAlerts: typeof staticQcAlerts;
+  lowStockItems: typeof staticLowStockItems;
+  notifications: typeof staticNotifications;
+}
+
+const staticDashboard: DashboardData = {
+  kpis: staticKpis,
+  productionTrend: staticProductionTrend,
+  revenueTrend: staticRevenueTrend,
+  profitTrend: staticProfitTrend,
+  monthlyPerformance: staticMonthlyPerformance,
+  factoryComparison: staticFactoryComparison,
+  dealerOrders: staticDealerOrders,
+  purchasePending: staticPurchasePending,
+  cashCollection: staticCashCollection,
+  recentAlerts: staticRecentAlerts,
+  qcAlerts: staticQcAlerts,
+  lowStockItems: staticLowStockItems,
+  notifications: staticNotifications,
+};
 
 /* ------------------------------------------------------------------ */
 /*  Custom Tooltip                                                     */
@@ -73,6 +108,30 @@ function CustomTooltip({ active, payload, label }: {
 /* ------------------------------------------------------------------ */
 
 export default function DashboardPage() {
+  const [dash, setDash] = useState<DashboardData>(staticDashboard);
+
+  useEffect(() => {
+    apiGet<DashboardData>("/dashboard")
+      .then((d) => setDash((prev) => ({ ...prev, ...d })))
+      .catch(() => {}); // offline -> static fallback
+  }, []);
+
+  const {
+    kpis: kpiData,
+    productionTrend,
+    revenueTrend,
+    profitTrend,
+    monthlyPerformance,
+    factoryComparison,
+    dealerOrders,
+    purchasePending,
+    cashCollection,
+    recentAlerts,
+    qcAlerts,
+    lowStockItems,
+    notifications,
+  } = dash;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}

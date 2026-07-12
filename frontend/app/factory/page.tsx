@@ -3,9 +3,12 @@
 // ============================================================
 //  Factory Dashboard
 //  Top-level overview of all factory operations.
-//  Static data only — no backend connection.
+//  Fetches live data from /api/factory/dashboard (KPIs computed
+//  from the database); falls back to static data when offline.
 // ============================================================
 
+import { useEffect, useState } from "react";
+import { apiGet } from "@/lib/api";
 import {
   Users2,
   UserCheck,
@@ -264,7 +267,31 @@ function AnnouncementIcon({ priority }: { priority: AnnouncementItem["priority"]
 /*  FACTORY DASHBOARD PAGE                                             */
 /* ------------------------------------------------------------------ */
 
+interface FactoryDashboardData {
+  kpis: FactoryKpi[];
+  attendanceTrend: typeof attendanceTrend;
+  gateEntriesByType: typeof gateEntriesByType;
+  recentActivity: ActivityItem[];
+  machineStatus: FactoryMachineStatus[];
+  announcements: AnnouncementItem[];
+}
+
 export default function FactoryDashboardPage() {
+  const [live, setLive] = useState<FactoryDashboardData | null>(null);
+
+  useEffect(() => {
+    apiGet<FactoryDashboardData>("/factory/dashboard")
+      .then(setLive)
+      .catch(() => setLive(null)); // offline -> static fallback
+  }, []);
+
+  const kpis = live?.kpis ?? factoryKpiData;
+  const attTrend = live?.attendanceTrend ?? attendanceTrend;
+  const gateEntries = live?.gateEntriesByType ?? gateEntriesByType;
+  const activity = live?.recentActivity ?? recentActivity;
+  const machines = live?.machineStatus ?? factoryMachineStatus;
+  const notices = live?.announcements ?? announcements;
+
   return (
     <div className="space-y-6">
 
@@ -301,7 +328,7 @@ export default function FactoryDashboardPage() {
 
       {/* KPI Cards — 3 columns → 9 cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {factoryKpiData.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <FactoryKpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -320,7 +347,7 @@ export default function FactoryDashboardPage() {
         >
           <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={attendanceTrend}>
+              <AreaChart data={attTrend}>
                 <defs>
                   <linearGradient id="presentGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#22C55E" stopOpacity={0.3} />
@@ -349,7 +376,7 @@ export default function FactoryDashboardPage() {
         >
           <div className="h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={gateEntriesByType} layout="vertical" barSize={12}>
+              <BarChart data={gateEntries} layout="vertical" barSize={12}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" horizontal={false} />
                 <XAxis type="number" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="type" type="category" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} width={72} />
@@ -377,7 +404,7 @@ export default function FactoryDashboardPage() {
             </span>
           </div>
           <div className="px-5 py-3 space-y-2 max-h-[320px] overflow-y-auto">
-            {recentActivity.map((item) => (
+            {activity.map((item) => (
               <div key={item.id} className="flex items-start gap-3 py-2 border-b border-border/10 last:border-0">
                 <ActivityIcon type={item.type} />
                 <div className="flex-1 min-w-0">
@@ -432,7 +459,7 @@ export default function FactoryDashboardPage() {
               <p className="text-xs text-muted mt-0.5">Current shift — live status</p>
             </div>
             <Badge variant="success" dot>
-              {factoryMachineStatus.filter((m) => m.status === "running").length} Running
+              {machines.filter((m) => m.status === "running").length} Running
             </Badge>
           </div>
           <div className="overflow-x-auto">
@@ -446,7 +473,7 @@ export default function FactoryDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {factoryMachineStatus.map((m) => (
+                {machines.map((m) => (
                   <tr key={m.id} className="border-t border-border/10 hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-3 text-xs font-medium text-white">{m.name}</td>
                     <td className="px-5 py-3 text-xs text-muted">{m.line}</td>
@@ -470,7 +497,7 @@ export default function FactoryDashboardPage() {
             <p className="text-xs text-muted mt-0.5">Factory notices &amp; updates</p>
           </div>
           <div className="px-5 py-3 space-y-3">
-            {announcements.map((ann) => (
+            {notices.map((ann) => (
               <div
                 key={ann.id}
                 className="flex items-start gap-3 p-3 rounded-xl border border-border/20 hover:border-border/40 hover:bg-white/[0.02] transition-all"

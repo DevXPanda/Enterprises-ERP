@@ -1,30 +1,24 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ScrollText } from "lucide-react";
+import { ModulePage } from "@/components/factory/module-page";
 
 export default function BomPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Bill of Materials"
-        description="Formulate raw material proportions and track ingredient costs for cement grades."
-        breadcrumbs={[
-          { label: "Manufacturing", href: "/manufacturing/dashboard" },
-          { label: "BOM" },
-        ]}
-      />
-      <EmptyState
-        title="Bill of Materials (BOM) Editor"
-        description="Verify raw input compositions including Limestone, Gypsum, and Slag ratios. Keep recipes consistent and optimize material pricing."
-        moduleName="Manufacturing"
-        icon={ScrollText}
-        features={[
-          "Limestone, Gypsum, and Coal ratios",
-          "Multi-stage recipe versions",
-          "Interactive raw ingredient cost sheets",
-          "Material volume safety calculators",
-        ]}
-      />
-    </div>
+    <ModulePage
+      title="Bill of Materials"
+      description="Component structure per product with quantities and revisions."
+      breadcrumbs={[
+        { label: "Manufacturing", href: "/manufacturing/dashboard" },
+        { label: "BOM" },
+      ]}
+      addNewLabel="Add Component"
+      columns={[
+        { key: "bomNo", label: "BOM No." },
+        { key: "product", label: "Product" },
+        { key: "component", label: "Component" },
+        { key: "quantityPer", label: "Qty / Unit" },
+        { key: "unit", label: "UOM" },
+        { key: "revision", label: "Revision" },
+        { key: "status", label: "Status" },
+      ]}
+    />
   );
 }

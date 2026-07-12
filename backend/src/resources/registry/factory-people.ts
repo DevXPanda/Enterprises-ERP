@@ -1,0 +1,185 @@
+// Factory — Employee Management, Attendance and Visitor Management resources.
+import { defineResource } from '../resource.types';
+
+export const factoryPeople = [
+
+  defineResource(
+    'factory/employee-management/employees',
+    'Employees',
+    'empId name department designation shift mobile status',
+    [
+      ['EMP-1024', 'Ramesh Kumar', 'Production', 'Line Operator', 'Morning', '98220 11223', 'Active'],
+      ['EMP-1087', 'Anita Sharma', 'Quality', 'QC Inspector', 'Morning', '98500 44556', 'Active'],
+      ['EMP-1132', 'Vikram Joshi', 'Store', 'Store Keeper', 'General', '99700 77889', 'Active'],
+      ['EMP-1056', 'Suresh Patil', 'Maintenance', 'Fitter', 'Morning', '98810 22334', 'Active'],
+      ['EMP-1210', 'Kavita Nair', 'Administration', 'HR Executive', 'General', '90040 55667', 'On Leave'],
+    ],
+    { code: { field: 'empId', prefix: 'EMP' } },
+  ),
+  defineResource(
+    'factory/employee-management/departments',
+    'Departments',
+    'deptCode name head strength:int shift status',
+    [
+      ['DEP-01', 'Production', 'Rohit Gupta', 168, 'Rotational', 'Active'],
+      ['DEP-02', 'Quality', 'Anita Sharma', 42, 'Morning', 'Active'],
+      ['DEP-03', 'Store', 'Vikram Joshi', 35, 'General', 'Active'],
+      ['DEP-04', 'Maintenance', 'Arjun Mehta', 58, 'Rotational', 'Active'],
+      ['DEP-05', 'Dispatch', 'Priya Verma', 47, 'Morning', 'Active'],
+    ],
+    { code: { field: 'deptCode', prefix: 'DEP' } },
+  ),
+  defineResource(
+    'factory/employee-management/designation',
+    'Designations',
+    'code title department grade employees:int status',
+    [
+      ['DSG-01', 'Line Operator', 'Production', 'G3', 96, 'Active'],
+      ['DSG-02', 'QC Inspector', 'Quality', 'G4', 28, 'Active'],
+      ['DSG-03', 'Store Keeper', 'Store', 'G4', 12, 'Active'],
+      ['DSG-04', 'Shift Supervisor', 'Production', 'G6', 18, 'Active'],
+      ['DSG-05', 'Fitter', 'Maintenance', 'G3', 34, 'Active'],
+    ],
+    { code: { field: 'code', prefix: 'DSG' } },
+  ),
+  defineResource(
+    'factory/employee-management/shifts',
+    'Shifts',
+    'shiftCode name startTime endTime breakDuration employees:int status',
+    [
+      ['SH-A', 'Morning', '06:00', '14:00', '30 min', 172, 'Active'],
+      ['SH-B', 'Evening', '14:00', '22:00', '30 min', 148, 'Active'],
+      ['SH-C', 'Night', '22:00', '06:00', '45 min', 62, 'Active'],
+      ['SH-G', 'General', '09:00', '18:00', '60 min', 46, 'Active'],
+      ['SH-W', 'Weekend Maintenance', '08:00', '16:00', '30 min', 20, 'Inactive'],
+    ],
+  ),
+  defineResource(
+    'factory/employee-management/documents',
+    'Employee Documents',
+    'docId empName docType docNo issueDate:date expiryDate:date status',
+    [
+      ['DOC-3301', 'Ramesh Kumar', 'Aadhaar Card', 'XXXX-XXXX-4821', '2018-03-12', null, 'Verified'],
+      ['DOC-3302', 'Suresh Patil', 'Safety Training Cert', 'STC-2025-118', '2025-11-02', '2026-11-01', 'Verified'],
+      ['DOC-3303', 'Anita Sharma', 'QC Certification', 'NQC-9915', '2024-08-20', '2027-08-19', 'Verified'],
+      ['DOC-3304', 'Baljeet Singh', 'Contractor License', 'CL-MH-7742', '2025-04-01', '2026-03-31', 'Expired'],
+      ['DOC-3305', 'Kavita Nair', 'PAN Card', 'ABCPN1234F', '2015-06-18', null, 'Pending Review'],
+    ],
+    { code: { field: 'docId', prefix: 'DOC' } },
+  ),
+
+  defineResource(
+    'factory/attendance/dashboard',
+    'Attendance by Department',
+    'department strength:int present:int absent:int late:int attendance:num shift',
+    [
+      ['Production', 168, 159, 9, 4, 94.6, 'Rotational'],
+      ['Quality', 42, 41, 1, 0, 97.6, 'Morning'],
+      ['Store', 35, 33, 2, 1, 94.3, 'General'],
+      ['Maintenance', 58, 52, 6, 2, 89.7, 'Rotational'],
+      ['Dispatch', 47, 45, 2, 1, 95.7, 'Morning'],
+    ],
+  ),
+  defineResource(
+    'factory/attendance/department-checkin',
+    'Department Check-In',
+    'empId name department checkIn:ts checkOut:ts hours:num status',
+    [
+      ['EMP-1024', 'Ramesh Kumar', 'Production', '2026-07-11 06:02', null, null, 'Working'],
+      ['EMP-1087', 'Anita Sharma', 'Quality', '2026-07-11 06:11', null, null, 'Working'],
+      ['EMP-1056', 'Suresh Patil', 'Maintenance', '2026-07-10 06:01', '2026-07-10 14:12', 8.2, 'Completed'],
+      ['EMP-1132', 'Vikram Joshi', 'Store', '2026-07-11 08:58', null, null, 'Working'],
+      ['EMP-1178', 'Rohit Gupta', 'Production', '2026-07-11 06:24', null, null, 'Late Entry'],
+    ],
+  ),
+  defineResource(
+    'factory/attendance/supervisor-approval',
+    'Supervisor Approvals',
+    'requestId empName type date:date reason supervisor status',
+    [
+      ['REQ-771', 'Ramesh Kumar', 'Overtime', '2026-07-10', 'Line A packing backlog', 'Rohit Gupta', 'Approved'],
+      ['REQ-772', 'Suresh Patil', 'Missed Punch', '2026-07-09', 'Biometric failure at Gate 1', 'Arjun Mehta', 'Pending'],
+      ['REQ-773', 'Kavita Nair', 'Leave (CL)', '2026-07-12', 'Personal work', 'Priya Verma', 'Pending'],
+      ['REQ-774', 'Vikram Joshi', 'Early Exit', '2026-07-08', 'Medical appointment', 'Rohit Gupta', 'Approved'],
+      ['REQ-775', 'Anita Sharma', 'Shift Swap', '2026-07-14', 'Swap with N. Kulkarni (Evening)', 'Rohit Gupta', 'Rejected'],
+    ],
+    { code: { field: 'requestId', prefix: 'REQ' } },
+  ),
+  defineResource(
+    'factory/attendance/shift-management',
+    'Shift Management',
+    'empId name department currentShift nextShift effectiveDate:date status',
+    [
+      ['EMP-1024', 'Ramesh Kumar', 'Production', 'Morning', 'Evening', '2026-07-14', 'Scheduled'],
+      ['EMP-1178', 'Rohit Gupta', 'Production', 'Evening', 'Night', '2026-07-14', 'Scheduled'],
+      ['EMP-1056', 'Suresh Patil', 'Maintenance', 'Morning', 'Morning', '2026-07-14', 'No Change'],
+      ['EMP-1301', 'Nilesh Kulkarni', 'Production', 'Night', 'Morning', '2026-07-14', 'Scheduled'],
+      ['EMP-1087', 'Anita Sharma', 'Quality', 'Morning', 'Evening', '2026-07-21', 'Pending Approval'],
+    ],
+  ),
+  defineResource(
+    'factory/attendance/reports',
+    'Attendance Reports',
+    'reportId name type period department generatedAt:ts status',
+    [
+      ['ATR-101', 'Daily Muster — 10 Jul', 'Daily', '10 Jul 2026', 'All', '2026-07-11 06:30', 'Ready'],
+      ['ATR-100', 'Weekly Summary — W27', 'Weekly', '29 Jun – 05 Jul 2026', 'All', '2026-07-06 07:00', 'Ready'],
+      ['ATR-099', 'OT Register — June', 'Monthly', 'Jun 2026', 'Production', '2026-07-01 09:15', 'Ready'],
+      ['ATR-098', 'Late Arrivals — June', 'Monthly', 'Jun 2026', 'All', '2026-07-01 09:20', 'Ready'],
+      ['ATR-102', 'Contractor Attendance — W28', 'Weekly', '06 – 12 Jul 2026', 'Contractors', '2026-07-11 12:00', 'Generating'],
+    ],
+    { code: { field: 'reportId', prefix: 'ATR' } },
+  ),
+
+  defineResource(
+    'factory/visitor-management/visitors',
+    'Visitors',
+    'visitorId name company mobile totalVisits:int lastVisit:date status',
+    [
+      ['VST-901', 'Ajay Sharma', 'TATA Projects', '98200 12345', 8, '2026-07-11', 'Active'],
+      ['VST-902', 'Suresh Patel', 'Infra Consultants', '99670 23456', 3, '2026-07-11', 'Active'],
+      ['VST-903', 'Meena Iyer', 'Rocky Minerals Ltd', '98450 34567', 12, '2026-07-11', 'Active'],
+      ['VST-904', 'Rahul Deshmukh', 'PackWell Industries', '90280 45678', 5, '2026-07-11', 'Active'],
+      ['VST-905', 'Deepak Malhotra', 'Axis Bank', '98110 56789', 1, '2026-05-22', 'Blacklisted'],
+    ],
+    { code: { field: 'visitorId', prefix: 'VST' } },
+  ),
+  defineResource(
+    'factory/visitor-management/requests',
+    'Visit Requests',
+    'requestId visitorName company host visitDate:date purpose status',
+    [
+      ['VRQ-501', 'Ajay Sharma', 'TATA Projects', 'Rohit Gupta', '2026-07-11', 'Vendor Meeting', 'Approved'],
+      ['VRQ-502', 'Nisha Agarwal', 'Ultratech (Benchmark visit)', 'Plant Head', '2026-07-15', 'Plant Tour', 'Pending'],
+      ['VRQ-503', 'Farhan Khan', 'Eastern Coal Corp', 'Ramesh Kumar', '2026-07-11', 'Delivery Coordination', 'Approved'],
+      ['VRQ-504', 'Deepak Malhotra', 'Axis Bank', 'Accounts Head', '2026-07-13', 'KYC Documentation', 'Rejected'],
+      ['VRQ-505', 'Meena Iyer', 'Rocky Minerals Ltd', 'Vikram Joshi', '2026-07-16', 'Rate Negotiation', 'Pending'],
+    ],
+    { code: { field: 'requestId', prefix: 'VRQ' } },
+  ),
+  defineResource(
+    'factory/visitor-management/approvals',
+    'Visit Approvals',
+    'requestId visitorName company visitDate:date approver approvedAt:ts status',
+    [
+      ['VRQ-501', 'Ajay Sharma', 'TATA Projects', '2026-07-11', 'Rohit Gupta', '2026-07-10 17:42', 'Approved'],
+      ['VRQ-503', 'Farhan Khan', 'Eastern Coal Corp', '2026-07-11', 'Ramesh Kumar', '2026-07-10 18:05', 'Approved'],
+      ['VRQ-504', 'Deepak Malhotra', 'Axis Bank', '2026-07-13', 'Accounts Head', '2026-07-11 09:20', 'Rejected'],
+      ['VRQ-502', 'Nisha Agarwal', 'Ultratech', '2026-07-15', 'Plant Head', null, 'Awaiting'],
+      ['VRQ-505', 'Meena Iyer', 'Rocky Minerals Ltd', '2026-07-16', 'Vikram Joshi', null, 'Awaiting'],
+    ],
+  ),
+  defineResource(
+    'factory/visitor-management/visit-history',
+    'Visit History',
+    'visitId visitorName company entryTime:ts exitTime:ts duration host',
+    [
+      ['VIS-2203', 'Meena Iyer', 'Rocky Minerals Ltd', '2026-07-11 11:05', '2026-07-11 12:20', '1h 15m', 'Vikram Joshi'],
+      ['VIS-2195', 'Ajay Sharma', 'TATA Projects', '2026-07-08 10:00', '2026-07-08 12:45', '2h 45m', 'Rohit Gupta'],
+      ['VIS-2190', 'Rahul Deshmukh', 'PackWell Industries', '2026-07-05 14:30', '2026-07-05 15:10', '40m', 'Anita Sharma'],
+      ['VIS-2184', 'Suresh Patel', 'Infra Consultants', '2026-07-02 09:15', '2026-07-02 13:00', '3h 45m', 'Kavita Nair'],
+      ['VIS-2179', 'Deepak Malhotra', 'Axis Bank', '2026-05-22 11:00', '2026-05-22 11:35', '35m', 'Accounts Head'],
+    ],
+    { code: { field: 'visitId', prefix: 'VIS' } },
+  ),
+];

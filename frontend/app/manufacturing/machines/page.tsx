@@ -1,30 +1,24 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Cog } from "lucide-react";
+import { ModulePage } from "@/components/factory/module-page";
 
-export default function MachinesPage() {
+export default function MfgMachinesPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Machines"
-        description="Deep logs on Crusher, Raw Mill, Kiln, Cement Mill, and Packer runtime diagnostics."
-        breadcrumbs={[
-          { label: "Manufacturing", href: "/manufacturing/dashboard" },
-          { label: "Machines" },
-        ]}
-      />
-      <EmptyState
-        title="Machine Telemetry & Asset Logs"
-        description="View real-time sensor logs, temperature meters, crusher vibration metrics, and pre-load scheduled shutdowns."
-        moduleName="Manufacturing"
-        icon={Cog}
-        features={[
-          "Real-time sensor warning triggers",
-          "Scheduled maintenance planners",
-          "Asset life expectancy charts",
-          "Telemetry raw data dashboards",
-        ]}
-      />
-    </div>
+    <ModulePage
+      title="Machines"
+      description="Machine master with uptime and maintenance history."
+      breadcrumbs={[
+        { label: "Manufacturing", href: "/manufacturing/dashboard" },
+        { label: "Machines" },
+      ]}
+      addNewLabel="Add Machine"
+      columns={[
+        { key: "machineId", label: "Machine ID" },
+        { key: "name", label: "Machine Name" },
+        { key: "type", label: "Type" },
+        { key: "line", label: "Line" },
+        { key: "uptime", label: "Uptime %" },
+        { key: "lastMaintenance", label: "Last Maintenance" },
+        { key: "status", label: "Status" },
+      ]}
+    />
   );
 }

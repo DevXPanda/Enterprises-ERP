@@ -1,30 +1,24 @@
-import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { FileBarChart } from "lucide-react";
+import { ModulePage } from "@/components/factory/module-page";
 
-export default function ManufacturingReportsPage() {
+export default function MfgReportsPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Manufacturing Reports"
-        description="Comprehensive production history, batch variations, and plant output comparisons."
-        breadcrumbs={[
-          { label: "Manufacturing", href: "/manufacturing/dashboard" },
-          { label: "Reports" },
-        ]}
-      />
-      <EmptyState
-        title="Production & Plant Output Reports"
-        description="Analyze long-term trends in plant efficiency, downtime hours, fuel consumption costs, and waste volumes."
-        moduleName="Manufacturing"
-        icon={FileBarChart}
-        features={[
-          "Interactive PDF/CSV report exports",
-          "Year-over-year production metrics",
-          "Machine downtime breakdown graphs",
-          "Fuel vs output cost reports",
-        ]}
-      />
-    </div>
+    <ModulePage
+      title="Manufacturing Reports"
+      description="Production summaries, OEE trends and downtime analysis."
+      breadcrumbs={[
+        { label: "Manufacturing", href: "/manufacturing/dashboard" },
+        { label: "Reports" },
+      ]}
+      addNewLabel="Generate Report"
+      columns={[
+        { key: "reportId", label: "Report ID" },
+        { key: "name", label: "Report Name" },
+        { key: "type", label: "Type" },
+        { key: "period", label: "Period" },
+        { key: "generatedAt", label: "Generated At" },
+        { key: "format", label: "Format" },
+        { key: "status", label: "Status" },
+      ]}
+    />
   );
 }
