@@ -5,9 +5,12 @@ import { Client } from 'pg';
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
-const T = process.env.TENANT_ID || '11111111-1111-1111-1111-111111111111';
+const T = process.env.TENANT_ID as string;
 
 async function main() {
+  if (!process.env.DATABASE_URL || !T) {
+    throw new Error('DATABASE_URL and TENANT_ID must be set in backend/.env');
+  }
   const db = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "NKTech ERP backend — NestJS + TypeORM + PostgreSQL (Neon)",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "nest build",
     "start": "node dist/main.js",

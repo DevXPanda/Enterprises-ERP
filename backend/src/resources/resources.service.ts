@@ -26,8 +26,7 @@ const RESERVED_QUERY_KEYS = new Set(['search', 'page', 'pageSize', 'sort', 'orde
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const DEFAULT_TENANT_ID =
-  process.env.TENANT_ID || '11111111-1111-1111-1111-111111111111';
+export const DEFAULT_TENANT_ID = process.env.TENANT_ID as string;
 
 @Injectable()
 export class ResourcesService {
