@@ -13,12 +13,12 @@ import { cn } from "@/lib/utils";
 import type { KpiData } from "@/types/dashboard";
 
 const iconComponents: Record<string, React.ReactNode> = {
-  Factory: <Factory className="w-6 h-6" />,
-  Truck: <Truck className="w-6 h-6" />,
-  ClipboardList: <ClipboardList className="w-6 h-6" />,
-  Cog: <Cog className="w-6 h-6" />,
-  ShieldAlert: <ShieldAlert className="w-6 h-6" />,
-  Gauge: <Gauge className="w-6 h-6" />,
+  Factory: <Factory className="w-4 h-4" />,
+  Truck: <Truck className="w-4 h-4" />,
+  ClipboardList: <ClipboardList className="w-4 h-4" />,
+  Cog: <Cog className="w-4 h-4" />,
+  ShieldAlert: <ShieldAlert className="w-4 h-4" />,
+  Gauge: <Gauge className="w-4 h-4" />,
 };
 
 const colorClasses: Record<string, { icon: string; glow: string }> = {
@@ -42,45 +42,44 @@ export function KpiCard({ data, index = 0 }: KpiCardProps) {
   return (
     <div
       className={cn(
-        "glass-card-hover p-5 flex flex-col gap-4",
+        "bg-card/60 border border-border/30 rounded-xl px-4 py-3 flex items-center gap-3",
         "animate-fade-in"
       )}
-      style={{ animationDelay: `${index * 80}ms` }}
+      style={{ animationDelay: `${index * 60}ms` }}
     >
-      <div className="flex items-start justify-between">
-        <div className={cn("p-2.5 rounded-xl", colors.icon)}>
-          {iconComponents[data.icon] || <Factory className="w-6 h-6" />}
-        </div>
-        {data.change !== undefined && (
-          <div
-            className={cn(
-              "flex items-center gap-0.5 text-xs font-semibold px-2 py-1 rounded-lg",
-              isPositive && "text-success bg-success/10",
-              isNegative && "text-danger bg-danger/10",
-              !isPositive && !isNegative && "text-muted bg-muted/10"
-            )}
-          >
-            {isPositive ? (
-              <TrendingUp className="w-3 h-3" />
-            ) : isNegative ? (
-              <TrendingDown className="w-3 h-3" />
-            ) : (
-              <Minus className="w-3 h-3" />
-            )}
-            {Math.abs(data.change)}%
-          </div>
-        )}
+      {/* Icon */}
+      <div className={cn("p-2 rounded-lg shrink-0", colors.icon)}>
+        {iconComponents[data.icon] || <Factory className="w-4 h-4" />}
       </div>
 
-      <div>
-        <p className="text-2xl font-bold text-white tracking-tight">
+      {/* Value + Label */}
+      <div className="flex-1 min-w-0">
+        <p className="text-lg font-bold text-white tracking-tight leading-tight">
           {data.value}
         </p>
-        <p className="text-xs text-muted mt-1">{data.label}</p>
-        {data.changeLabel && (
-          <p className="text-[10px] text-muted/60 mt-0.5">{data.changeLabel}</p>
-        )}
+        <p className="text-[11px] text-muted truncate">{data.label}</p>
       </div>
+
+      {/* Change badge */}
+      {data.change !== undefined && (
+        <div
+          className={cn(
+            "flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0",
+            isPositive && "text-success bg-success/10",
+            isNegative && "text-danger bg-danger/10",
+            !isPositive && !isNegative && "text-muted bg-muted/10"
+          )}
+        >
+          {isPositive ? (
+            <TrendingUp className="w-2.5 h-2.5" />
+          ) : isNegative ? (
+            <TrendingDown className="w-2.5 h-2.5" />
+          ) : (
+            <Minus className="w-2.5 h-2.5" />
+          )}
+          {Math.abs(data.change)}%
+        </div>
+      )}
     </div>
   );
 }

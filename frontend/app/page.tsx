@@ -92,7 +92,7 @@ function CustomTooltip({ active, payload, label }: {
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-navy-100 border border-border/50 rounded-lg px-3 py-2 shadow-glass">
+    <div className="bg-navy-100 border border-border/50 rounded-lg px-3 py-2">
       <p className="text-xs font-medium text-white mb-1">{label}</p>
       {payload.map((p, i) => (
         <p key={i} className="text-[11px] text-muted">
@@ -133,7 +133,7 @@ export default function DashboardPage() {
   } = dash;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -157,8 +157,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Charts Row: Production Trend + Revenue Trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Row 1: Production Trend + Revenue Trend + Profit Trend */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <ChartCard
           title="Production Trend"
           subtitle="Daily production vs target (bags)"
@@ -168,7 +168,7 @@ export default function DashboardPage() {
             </span>
           }
         >
-          <div className="h-[220px]">
+          <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={productionTrend}>
                 <defs>
@@ -182,8 +182,8 @@ export default function DashboardPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
-                <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="value" name="Produced" stroke="#2563EB" strokeWidth={2} fill="url(#prodGrad)" />
                 <Area type="monotone" dataKey="value2" name="Target" stroke="#8B5CF6" strokeWidth={2} strokeDasharray="5 5" fill="url(#targetGrad)" />
@@ -201,29 +201,26 @@ export default function DashboardPage() {
             </span>
           }
         >
-          <div className="h-[220px]">
+          <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
-                <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line type="monotone" dataKey="value" name="Revenue" stroke="#22C55E" strokeWidth={2.5} dot={{ fill: "#22C55E", r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
-      </div>
 
-      {/* Row 3: Profit Trend + OEE + Monthly Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <ChartCard title="Profit Trend" subtitle="Gross vs Net (₹ Lakhs)">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={profitTrend} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
-                <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="value" name="Gross" fill="#2563EB" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="value2" name="Net" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
@@ -231,15 +228,18 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         </ChartCard>
+      </div>
 
+      {/* Row 2: OEE + Monthly Performance + Factory Comparison */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <ChartCard title="Overall Equipment Effectiveness" subtitle="Current shift performance">
-          <div className="flex items-center justify-center py-4">
+          <div className="flex items-center justify-center py-2">
             <ProgressRing
               value={87.4}
               color="#2563EB"
               sublabel="of 85% target"
-              size={160}
-              strokeWidth={12}
+              size={140}
+              strokeWidth={10}
             />
           </div>
           <div className="grid grid-cols-3 gap-2 mt-2">
@@ -263,8 +263,8 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyPerformance} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
-                <XAxis dataKey="month" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
+                <XAxis dataKey="month" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="production" name="Production" fill="#22C55E" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="target" name="Target" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
@@ -272,20 +272,16 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         </ChartCard>
-      </div>
 
-      {/* Row 4: Factory Comparison + Dealer Orders */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <StatTable
           title="Factory Comparison"
           subtitle="Today's performance across plants"
           columns={[
             { key: "factory", label: "Plant", render: (r) => <span className="text-white font-medium">{r.factory as string}</span> },
-            { key: "production", label: "Production", render: (r) => <span className="text-white">{(r.production as number).toLocaleString("en-IN")}</span> },
-            { key: "target", label: "Target", render: (r) => (r.target as number).toLocaleString("en-IN") },
+            { key: "production", label: "Prod.", render: (r) => <span className="text-white">{(r.production as number).toLocaleString("en-IN")}</span> },
             {
               key: "efficiency",
-              label: "Efficiency",
+              label: "Eff.",
               render: (r) => {
                 const v = r.efficiency as number;
                 return (
@@ -310,7 +306,10 @@ export default function DashboardPage() {
           ]}
           data={factoryComparison as unknown as Record<string, unknown>[]}
         />
+      </div>
 
+      {/* Row 3: Dealer Orders + Purchase Pending + Cash Collection */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <StatTable
           title="Dealer Orders"
           subtitle="Recent orders overview"
@@ -326,10 +325,7 @@ export default function DashboardPage() {
           ]}
           data={dealerOrders as unknown as Record<string, unknown>[]}
         />
-      </div>
 
-      {/* Row 5: Purchase Pending + Cash Collection */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <StatTable
           title="Purchase Pending"
           subtitle="Pending purchase orders"
@@ -363,8 +359,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Row 6: Alerts + QC + Low Stock + Notifications */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Row 4: Alerts + Low Stock + Notifications */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <AlertCard title="Recent Alerts" alerts={recentAlerts} />
 
         {/* Low Stock */}

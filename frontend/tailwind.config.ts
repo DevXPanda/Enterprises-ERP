@@ -53,12 +53,12 @@ const config: Config = {
         sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
       },
       boxShadow: {
-        card: "0 4px 24px rgba(0, 0, 0, 0.25)",
-        glow: "0 0 20px rgba(37, 99, 235, 0.15)",
-        "glow-green": "0 0 20px rgba(34, 197, 94, 0.15)",
-        "glow-warning": "0 0 20px rgba(245, 158, 11, 0.15)",
-        "glow-danger": "0 0 20px rgba(239, 68, 68, 0.15)",
-        glass: "0 8px 32px rgba(0, 0, 0, 0.3)",
+        card: "none",
+        glow: "none",
+        "glow-green": "none",
+        "glow-warning": "none",
+        "glow-danger": "none",
+        glass: "none",
       },
       backdropBlur: {
         xs: "2px",

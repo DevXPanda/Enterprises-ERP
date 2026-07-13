@@ -74,7 +74,6 @@
   /* Glass card effect */
   .glass-card {
     @apply bg-card/80 backdrop-blur-md border border-border/50 rounded-2xl;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
   .glass-card-hover {
@@ -82,8 +81,7 @@
   }
 
   .glass-card-hover:hover {
-    @apply border-border shadow-glow;
-    transform: translateY(-2px);
+    @apply border-border;
   }
 
   /* Sidebar styles */
@@ -94,11 +92,11 @@
   }
 
   .sidebar-item:hover {
-    @apply bg-white/5 text-white shadow-sm;
+    @apply bg-white/5 text-white;
   }
 
   .sidebar-item.active {
-    @apply bg-primary/10 text-primary border border-primary/10 shadow-sm font-semibold;
+    @apply bg-primary/10 text-primary border border-primary/10 font-semibold;
   }
 
   .sidebar-item-child {
@@ -108,7 +106,7 @@
   }
 
   .sidebar-item-child:hover {
-    @apply text-white bg-white/5 shadow-sm;
+    @apply text-white bg-white/5;
   }
 
   .sidebar-item-child.active {

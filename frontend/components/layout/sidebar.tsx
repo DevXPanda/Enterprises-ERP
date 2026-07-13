@@ -444,20 +444,34 @@ export function Sidebar({ isCollapsed, toggleSidebar, expandedMenus, toggleMenu 
       aria-label="Main Navigation"
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-border/30 shrink-0">
-        <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shrink-0 bg-white/10">
-          <img src="/logo.png" alt="NK Tech Logo" className="w-full h-full object-contain" />
-        </div>
-        {!isCollapsed && (
-          <div className="overflow-hidden animate-fade-in">
-            <p className="text-sm font-bold text-white leading-tight truncate">
-              NKTech ERP
-            </p>
-            <p className="text-[10px] text-muted leading-tight">
-              Enterprise Platform
-            </p>
+      <div className="flex items-center justify-between px-4 h-16 border-b border-border/30 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shrink-0 bg-white/10">
+            <img src="/logo.png" alt="NK Tech Logo" className="w-full h-full object-contain" />
           </div>
-        )}
+          {!isCollapsed && (
+            <div className="overflow-hidden animate-fade-in">
+              <p className="text-sm font-bold text-white leading-tight truncate">
+                NKTech ERP
+              </p>
+              <p className="text-[10px] text-muted leading-tight">
+                Enterprise Platform
+              </p>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={toggleSidebar}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-muted hover:text-white hover:bg-white/10 transition-all duration-200"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-4 h-4" />
+          ) : (
+            <ChevronDown className="w-4 h-4 -rotate-90" />
+          )}
+        </button>
       </div>
 
       {/* Navigation */}
@@ -599,24 +613,7 @@ export function Sidebar({ isCollapsed, toggleSidebar, expandedMenus, toggleMenu 
         </div>
       )}
 
-      {/* Collapse toggle button */}
-      <div className="px-3 py-3 border-t border-border/20 shrink-0">
-        <button
-          onClick={toggleSidebar}
-          className="sidebar-item w-full justify-center hover:translate-x-0"
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? (
-            <PanelLeftOpen className="w-5 h-5" />
-          ) : (
-            <>
-              <PanelLeftClose className="w-5 h-5" />
-              <span>Collapse</span>
-            </>
-          )}
-        </button>
-      </div>
+
     </aside>
   );
 }
