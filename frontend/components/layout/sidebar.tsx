@@ -20,6 +20,7 @@ import {
   FileBarChart,
   PanelLeftClose,
   PanelLeftOpen,
+  Menu,
   // --- Factory module icons ---
   Building2,
   ScanLine,
@@ -57,8 +58,11 @@ import { cn } from "@/lib/utils";
 interface SidebarProps {
   isCollapsed: boolean;
   toggleSidebar: () => void;
+  isMobileOpen: boolean;
+  closeMobileMenu: () => void;
   expandedMenus: string[];
   toggleMenu: (menu: string) => void;
+  onLogout?: () => void;
 }
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -67,6 +71,7 @@ const iconMap: Record<string, React.ReactNode> = {
   manufacturing: <Factory className="w-5 h-5 shrink-0" />,
   wages: <Wallet className="w-5 h-5 shrink-0" />,
   settings: <Settings className="w-5 h-5 shrink-0" />,
+  logout: <LogOut className="w-5 h-5 shrink-0" />,
   "production-orders": <ClipboardList className="w-4 h-4 shrink-0" />,
   bom: <ScrollText className="w-4 h-4 shrink-0" />,
   "job-cards": <CreditCard className="w-4 h-4 shrink-0" />,
@@ -407,7 +412,15 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-export function Sidebar({ isCollapsed, toggleSidebar, expandedMenus, toggleMenu }: SidebarProps) {
+export function Sidebar({
+  isCollapsed,
+  toggleSidebar,
+  isMobileOpen,
+  closeMobileMenu,
+  expandedMenus,
+  toggleMenu,
+  onLogout,
+}: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href?: string) => {
@@ -437,8 +450,10 @@ export function Sidebar({ isCollapsed, toggleSidebar, expandedMenus, toggleMenu 
       className={cn(
         "fixed left-0 top-0 h-screen z-40 flex flex-col",
         "bg-sidebar border-r border-border/30",
-        "transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-[68px]" : "w-[260px]"
+        "transition-transform md:transition-all duration-300 ease-in-out",
+        "w-[260px]",
+        isCollapsed ? "md:w-[68px]" : "md:w-[260px]",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}
       role="navigation"
       aria-label="Main Navigation"
@@ -467,9 +482,9 @@ export function Sidebar({ isCollapsed, toggleSidebar, expandedMenus, toggleMenu 
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? (
-            <ChevronRight className="w-4 h-4" />
+            <Menu className="w-4.5 h-4.5" />
           ) : (
-            <ChevronDown className="w-4 h-4 -rotate-90" />
+            <Menu className="w-4.5 h-4.5" />
           )}
         </button>
       </div>
@@ -534,66 +549,69 @@ export function Sidebar({ isCollapsed, toggleSidebar, expandedMenus, toggleMenu 
                           {expandedMenus.includes(child.key) && (
                             <div className="mt-0.5 space-y-0.5 animate-slide-in">
                               {child.children.map((leaf) => (
-                                <Link
-                                  key={leaf.key}
-                                  href={leaf.href}
-                                  className={cn(
-                                    "flex items-center gap-2 pl-[56px] pr-3 py-1.5 rounded-lg text-[11px] font-medium",
-                                    "text-muted/75 transition-all duration-150 cursor-pointer relative",
-                                    "hover:text-white hover:bg-white/[0.05] hover:translate-x-0.5",
-                                    isActive(leaf.href) && "text-white bg-white/[0.06] pl-[60px]"
-                                  )}
-                                  aria-label={leaf.label}
-                                >
-                                  {isActive(leaf.href) && (
-                                    <span className="absolute left-[46px] top-1/4 bottom-1/4 w-[2px] bg-primary rounded-r animate-fade-in" />
-                                  )}
-                                  {iconMap[leaf.icon] || <ChevronRight className="w-3 h-3 shrink-0" />}
-                                  <span>{leaf.label}</span>
-                                </Link>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        /* ── Direct link child (e.g. "Dashboard" inside Factory) */
-                        <Link
-                          key={child.key}
-                          href={child.href!}
-                          className={cn(
-                            "sidebar-item-child relative hover:translate-x-0.5",
-                            isActive(child.href) && "active pl-[48px]"
-                          )}
-                          aria-label={child.label}
-                        >
-                          {isActive(child.href) && (
-                            <span className="absolute left-[34px] top-1/4 bottom-1/4 w-[3px] bg-primary rounded-r animate-fade-in" />
-                          )}
-                          {iconMap[child.icon] || <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
-                          <span>{child.label}</span>
-                        </Link>
-                      )
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              /* Simple link */
-              <Link
-                href={item.href!}
-                className={cn(
-                  "sidebar-item relative hover:translate-x-0.5",
-                  isActive(item.href) && "active pl-4"
-                )}
-                aria-label={item.label}
-              >
-                {isActive(item.href) && (
-                  <span className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-r animate-fade-in" />
-                )}
-                {iconMap[item.icon]}
-                {!isCollapsed && <span>{item.label}</span>}
-              </Link>
-            )}
+                                  <Link
+                                    key={leaf.key}
+                                    href={leaf.href}
+                                    onClick={closeMobileMenu}
+                                    className={cn(
+                                      "flex items-center gap-2 pl-[56px] pr-3 py-1.5 rounded-lg text-[11px] font-medium",
+                                      "text-muted/75 transition-all duration-150 cursor-pointer relative",
+                                      "hover:text-white hover:bg-white/[0.05] hover:translate-x-0.5",
+                                      isActive(leaf.href) && "text-white bg-white/[0.06] pl-[60px]"
+                                    )}
+                                    aria-label={leaf.label}
+                                  >
+                                    {isActive(leaf.href) && (
+                                      <span className="absolute left-[46px] top-1/4 bottom-1/4 w-[2px] bg-primary rounded-r animate-fade-in" />
+                                    )}
+                                    {iconMap[leaf.icon] || <ChevronRight className="w-3 h-3 shrink-0" />}
+                                    <span>{leaf.label}</span>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* ── Direct link child (e.g. "Dashboard" inside Factory) */
+                          <Link
+                            key={child.key}
+                            href={child.href!}
+                            onClick={closeMobileMenu}
+                            className={cn(
+                              "sidebar-item-child relative hover:translate-x-0.5",
+                              isActive(child.href) && "active pl-[48px]"
+                            )}
+                            aria-label={child.label}
+                          >
+                            {isActive(child.href) && (
+                              <span className="absolute left-[34px] top-1/4 bottom-1/4 w-[3px] bg-primary rounded-r animate-fade-in" />
+                            )}
+                            {iconMap[child.icon] || <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+                            <span>{child.label}</span>
+                          </Link>
+                        )
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Simple link */
+                <Link
+                  href={item.href!}
+                  onClick={closeMobileMenu}
+                  className={cn(
+                    "sidebar-item relative hover:translate-x-0.5",
+                    isActive(item.href) && "active pl-4"
+                  )}
+                  aria-label={item.label}
+                >
+                  {isActive(item.href) && (
+                    <span className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-r animate-fade-in" />
+                  )}
+                  {iconMap[item.icon]}
+                  {!isCollapsed && <span>{item.label}</span>}
+                </Link>
+              )}
           </div>
         ))}
       </nav>

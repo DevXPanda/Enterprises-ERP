@@ -291,7 +291,7 @@ export default function FactoryDashboardPage() {
       </div>
 
       {/* KPI Cards Row — 9 cards in one line on desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-3">
         {factoryKpiData.map((kpi, i) => (
           <FactoryKpiCard key={kpi.id} data={kpi} index={i} />
         ))}
@@ -355,7 +355,7 @@ export default function FactoryDashboardPage() {
             <h3 className="text-sm font-semibold text-white">Quick Actions</h3>
             <p className="text-xs text-muted mt-0.5">Common factory tasks</p>
           </div>
-          <div className="grid grid-cols-2 gap-2.5 my-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-3">
             {quickActions.slice(0, 4).map((action) => (
               <a
                 key={action.id}
