@@ -58,6 +58,16 @@ import {
   type AnnouncementItem,
   type FactoryMachineStatus,
 } from "@/data/factory-data";
+import { useApi } from "@/hooks/use-api";
+
+interface FactoryDashboardData {
+  kpis: FactoryKpi[];
+  attendanceTrend: typeof attendanceTrend;
+  gateEntriesByType: typeof gateEntriesByType;
+  recentActivity: ActivityItem[];
+  machineStatus: FactoryMachineStatus[];
+  announcements: AnnouncementItem[];
+}
 
 /* ------------------------------------------------------------------ */
 // Icon resolver
@@ -257,6 +267,14 @@ function AnnouncementIcon({ priority }: { priority: AnnouncementItem["priority"]
 /* ================================================================== */
 
 export default function FactoryDashboardPage() {
+  const live = useApi<FactoryDashboardData>("/factory/dashboard");
+  const kpis = live?.kpis ?? factoryKpiData;
+  const attTrend = live?.attendanceTrend ?? attendanceTrend;
+  const gateEntries = live?.gateEntriesByType ?? gateEntriesByType;
+  const activity = live?.recentActivity ?? recentActivity;
+  const machines = live?.machineStatus ?? factoryMachineStatus;
+  const notices = live?.announcements ?? announcements;
+
   return (
     <div className="space-y-5">
       {/* Page Header */}
@@ -292,7 +310,7 @@ export default function FactoryDashboardPage() {
 
       {/* KPI Cards Row — 9 cards in one line on desktop */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-3">
-        {factoryKpiData.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <FactoryKpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -310,7 +328,7 @@ export default function FactoryDashboardPage() {
         >
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={attendanceTrend}>
+              <AreaChart data={attTrend}>
                 <defs>
                   <linearGradient id="presentGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#22C55E" stopOpacity={0.3} />
@@ -338,7 +356,7 @@ export default function FactoryDashboardPage() {
         >
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={gateEntriesByType} layout="vertical" barSize={10}>
+              <BarChart data={gateEntries} layout="vertical" barSize={10}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" horizontal={false} />
                 <XAxis type="number" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="type" type="category" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} width={68} />
@@ -391,7 +409,7 @@ export default function FactoryDashboardPage() {
             </span>
           </div>
           <div className="px-5 py-3 space-y-2 max-h-[220px] overflow-y-auto">
-            {recentActivity.map((item) => (
+            {activity.map((item) => (
               <div key={item.id} className="flex items-start gap-3 py-2 border-b border-border/10 last:border-0">
                 <ActivityIcon type={item.type} />
                 <div className="flex-1 min-w-0">
@@ -416,7 +434,7 @@ export default function FactoryDashboardPage() {
               <p className="text-xs text-muted mt-0.5">Current shift — live status</p>
             </div>
             <Badge variant="success" dot>
-              {factoryMachineStatus.filter((m) => m.status === "running").length} Running
+              {machines.filter((m) => m.status === "running").length} Running
             </Badge>
           </div>
           <div className="overflow-x-auto">
@@ -429,7 +447,7 @@ export default function FactoryDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {factoryMachineStatus.slice(0, 5).map((m) => (
+                {machines.slice(0, 5).map((m) => (
                   <tr key={m.id} className="border-t border-border/10 hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-2 text-xs font-medium text-white">{m.name}</td>
                     <td className="px-5 py-2 text-xs text-muted">{m.line}</td>
@@ -452,7 +470,7 @@ export default function FactoryDashboardPage() {
             <p className="text-xs text-muted mt-0.5">Factory notices &amp; updates</p>
           </div>
           <div className="px-5 py-3 space-y-2.5 max-h-[220px] overflow-y-auto">
-            {announcements.map((ann) => (
+            {notices.map((ann) => (
               <div
                 key={ann.id}
                 className="flex items-start gap-2.5 p-2.5 rounded-xl border border-border/20 hover:border-border/40 hover:bg-white/[0.02] transition-all"

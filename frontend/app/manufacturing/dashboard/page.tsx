@@ -15,7 +15,19 @@ import {
   mfgDashboardKpis, productionByLine, oeeTrend, mfgMachines,
   productionLines, qcAlerts, shiftSummary,
   type MfgKpi, type QcAlertItem, type ShiftSummary as ShiftType,
+  type MfgMachine, type ProductionLineRow,
 } from "@/data/manufacturing-data";
+import { useApi } from "@/hooks/use-api";
+
+interface MfgDashboardData {
+  kpis: MfgKpi[];
+  productionByLine: typeof productionByLine;
+  oeeTrend: typeof oeeTrend;
+  machines: MfgMachine[];
+  productionLines: ProductionLineRow[];
+  qcAlerts: QcAlertItem[];
+  shiftSummary: ShiftType[];
+}
 
 /* ---- Icon map ---- */
 const iconMap: Record<string, React.ReactNode> = {
@@ -80,6 +92,15 @@ function SeverityIcon({ severity }: { severity: QcAlertItem["severity"] }) {
 /* ================================================================== */
 
 export default function ManufacturingDashboardPage() {
+  const live = useApi<MfgDashboardData>("/manufacturing/dashboard");
+  const kpis = live?.kpis ?? mfgDashboardKpis;
+  const byLine = live?.productionByLine ?? productionByLine;
+  const oee = live?.oeeTrend ?? oeeTrend;
+  const machines = live?.machines ?? mfgMachines;
+  const lines = live?.productionLines ?? productionLines;
+  const alerts = live?.qcAlerts ?? qcAlerts;
+  const shifts = live?.shiftSummary ?? shiftSummary;
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -90,7 +111,7 @@ export default function ManufacturingDashboardPage() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {mfgDashboardKpis.map((kpi, i) => <MfgKpiCard key={kpi.id} data={kpi} index={i} />)}
+        {kpis.map((kpi, i) => <MfgKpiCard key={kpi.id} data={kpi} index={i} />)}
       </div>
 
       {/* Row 1: Production by Line + OEE Trend + Machine Status */}
@@ -98,7 +119,7 @@ export default function ManufacturingDashboardPage() {
         <ChartCard title="Production by Line" subtitle="Today — bags produced vs target">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={productionByLine} barGap={4}>
+              <BarChart data={byLine} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
                 <XAxis dataKey="line" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -113,7 +134,7 @@ export default function ManufacturingDashboardPage() {
         <ChartCard title="OEE Trend" subtitle="Last 7 days — % effectiveness">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={oeeTrend}>
+              <AreaChart data={oee}>
                 <defs>
                   <linearGradient id="oeeGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3} />
@@ -138,7 +159,7 @@ export default function ManufacturingDashboardPage() {
               <h3 className="text-sm font-semibold text-white">Machine Status</h3>
               <p className="text-xs text-muted mt-0.5">Current shift — live</p>
             </div>
-            <Badge variant="success" dot>{mfgMachines.filter(m => m.status === "running").length} Running</Badge>
+            <Badge variant="success" dot>{machines.filter(m => m.status === "running").length} Running</Badge>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -150,7 +171,7 @@ export default function ManufacturingDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {mfgMachines.slice(0, 6).map(m => (
+                {machines.slice(0, 6).map(m => (
                   <tr key={m.id} className="border-t border-border/10 hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-2.5 text-xs font-medium text-white">{m.name}</td>
                     <td className="px-5 py-2.5">
@@ -180,7 +201,7 @@ export default function ManufacturingDashboardPage() {
             <p className="text-xs text-muted mt-0.5">Today's line-wise output</p>
           </div>
           <div className="px-5 pb-4 space-y-3">
-            {productionLines.map(line => {
+            {lines.map(line => {
               const pct = Math.round((line.produced / line.target) * 100);
               return (
                 <div key={line.id} className="space-y-1.5">
@@ -210,10 +231,10 @@ export default function ManufacturingDashboardPage() {
               <h3 className="text-sm font-semibold text-white">Recent QC Alerts</h3>
               <p className="text-xs text-muted mt-0.5">Quality control issues</p>
             </div>
-            <Badge variant="danger">{qcAlerts.filter(a => a.severity === "critical").length} critical</Badge>
+            <Badge variant="danger">{alerts.filter(a => a.severity === "critical").length} critical</Badge>
           </div>
           <div className="px-5 pb-4 space-y-2">
-            {qcAlerts.map(alert => (
+            {alerts.map(alert => (
               <div key={alert.id} className="flex items-start gap-3 p-2.5 rounded-xl border border-border/20 hover:border-border/40 hover:bg-white/[0.02] transition-all">
                 <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
                   alert.severity === "critical" ? "bg-danger/10" : alert.severity === "warning" ? "bg-warning/10" : "bg-primary/10"
@@ -245,7 +266,7 @@ export default function ManufacturingDashboardPage() {
             </span>
           </div>
           <div className="px-5 pb-4 space-y-3">
-            {shiftSummary.map(s => (
+            {shifts.map(s => (
               <div key={s.shift} className={cn("p-3 rounded-xl border transition-all",
                 s.status === "active" ? "border-primary/30 bg-primary/5" : "border-border/20 bg-white/[0.01]"
               )}>

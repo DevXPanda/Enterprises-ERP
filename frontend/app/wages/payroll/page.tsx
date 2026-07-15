@@ -19,7 +19,10 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { payrollKpis, payrollList, type WagesKpi } from "@/data/wages-data";
+import { payrollKpis, payrollList, type WagesKpi, type PayrollRow } from "@/data/wages-data";
+import { useApi } from "@/hooks/use-api";
+import { apiSend } from "@/lib/api";
+import { RecordModal } from "@/components/ui/record-modal";
 
 const iconMap: Record<string, React.ReactNode> = {
   IndianRupee: <IndianRupee className="w-4 h-4" />,
@@ -80,7 +83,31 @@ export default function PayrollPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filtered = payrollList.filter((p) => {
+  const [version, setVersion] = useState(0);
+  const [modal, setModal] = useState(false);
+  const live = useApi<{ kpis: WagesKpi[]; data: Record<string, unknown>[] }>("/wages/payroll", version);
+
+  const runPayroll = async (values: Record<string, string>) => {
+    await apiSend("POST", "/wages/payroll/generate", { month: values.month });
+    setVersion((v) => v + 1);
+  };
+
+  const kpis = live?.kpis ?? payrollKpis;
+  const rows: PayrollRow[] = live
+    ? live.data.map((r) => ({
+        payoutId: String(r.payoutId ?? "—"),
+        workerId: String(r.workerId ?? "—"),
+        name: String(r.name ?? "—"),
+        baseWages: Number(r.baseWages ?? 0),
+        overtimePay: Number(r.overtimePay ?? 0),
+        deductions: Number(r.deductions ?? 0),
+        bonuses: Number(r.bonuses ?? 0),
+        netPayable: Number(r.netPayable ?? 0),
+        status: (r.status ?? "processing") as PayrollRow["status"],
+      }))
+    : payrollList;
+
+  const filtered = rows.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.workerId.toLowerCase().includes(search.toLowerCase()) ||
@@ -108,7 +135,7 @@ export default function PayrollPage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {payrollKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -146,7 +173,7 @@ export default function PayrollPage() {
             <Download className="w-3.5 h-3.5" />
             Export Payslips
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
             <RefreshCw className="w-3.5 h-3.5" />
             Run Payroll Engine
           </button>
@@ -207,6 +234,18 @@ export default function PayrollPage() {
           </table>
         </div>
       </div>
+
+      {modal && (
+        <RecordModal
+          title="Run Payroll Engine"
+          fields={[
+            { key: "month", label: "Period (YYYY-MM)", required: true, placeholder: "e.g. 2026-07" },
+          ]}
+          submitLabel="Generate Wage Sheet"
+          onSubmit={runPayroll}
+          onClose={() => setModal(false)}
+        />
+      )}
     </div>
   );
 }

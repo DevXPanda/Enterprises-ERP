@@ -1,11 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Filter, Download, Plus, Factory, Activity, CheckCircle2, Clock, Timer, Target, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Search, Filter, Download, Plus, Factory, Activity, CheckCircle2, Clock, Timer, Target, TrendingUp, TrendingDown, Minus, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { productionOrdersKpis, productionOrders, type MfgKpi } from "@/data/manufacturing-data";
+import { productionOrdersKpis, productionOrders, type MfgKpi, type ProductionOrder } from "@/data/manufacturing-data";
+import { useApi } from "@/hooks/use-api";
+import { apiSend } from "@/lib/api";
+import { RecordModal } from "@/components/ui/record-modal";
+
+const fmtDay = (d?: string | null) =>
+  d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "—";
 
 const iconMap: Record<string, React.ReactNode> = {
   ClipboardList: <Factory className="w-4 h-4" />, Activity: <Activity className="w-4 h-4" />,
@@ -37,9 +43,70 @@ function KpiCard({ data, index }: { data: MfgKpi; index: number }) {
 const priorityColors: Record<string, string> = { high: "text-danger bg-danger/10", medium: "text-warning bg-warning/10", low: "text-muted bg-muted/10" };
 const statusVariant = (s: string) => s === "completed" ? "success" : s === "in-progress" ? "warning" : s === "on-hold" ? "danger" : "default";
 
+type OrderRow = ProductionOrder & { dbId?: number; isoStart?: string; isoDue?: string };
+
+const ORDER_FIELDS = [
+  { key: "product", label: "Product", required: true },
+  { key: "grade", label: "Grade" },
+  { key: "quantity", label: "Quantity", type: "number" as const, required: true },
+  { key: "unit", label: "Unit" },
+  { key: "priority", label: "Priority", type: "select" as const, options: ["high", "medium", "low"] },
+  { key: "line", label: "Line", type: "select" as const, options: ["Line A", "Line B", "Line C", "Line D"] },
+  { key: "startDate", label: "Start Date", type: "date" as const },
+  { key: "dueDate", label: "Due Date", type: "date" as const },
+  { key: "progress", label: "Progress %", type: "number" as const },
+  { key: "status", label: "Status", type: "select" as const, options: ["pending", "in-progress", "completed", "on-hold"] },
+];
+const ORDER_NUM_KEYS = ["quantity", "progress"];
+
 export default function ProductionOrdersPage() {
   const [search, setSearch] = useState("");
-  const filtered = productionOrders.filter(o => o.id.toLowerCase().includes(search.toLowerCase()) || o.product.toLowerCase().includes(search.toLowerCase()));
+  const [version, setVersion] = useState(0);
+  const [modal, setModal] = useState<"create" | OrderRow | null>(null);
+  const kpiLive = useApi<{ kpis: MfgKpi[] }>("/manufacturing/production-orders/analytics", version);
+  const listLive = useApi<{ data: Record<string, unknown>[] }>("/manufacturing/production-orders?pageSize=50", version);
+
+  const saveOrder = async (values: Record<string, string>) => {
+    const payload: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(values)) {
+      if (v === "") continue;
+      payload[k] = ORDER_NUM_KEYS.includes(k) ? Number(v) : v;
+    }
+    if (modal !== "create" && modal?.dbId !== undefined) {
+      await apiSend("PATCH", `/manufacturing/production-orders/${modal.dbId}`, payload);
+    } else {
+      await apiSend("POST", "/manufacturing/production-orders", payload);
+    }
+    setVersion((v) => v + 1);
+  };
+
+  const removeRow = async (row: OrderRow) => {
+    if (row.dbId === undefined || !window.confirm(`Delete order ${row.id}?`)) return;
+    await apiSend("DELETE", `/manufacturing/production-orders/${row.dbId}`);
+    setVersion((v) => v + 1);
+  };
+
+  const kpis = kpiLive?.kpis ?? productionOrdersKpis;
+  const orders: OrderRow[] = listLive
+    ? listLive.data.map((r) => ({
+        dbId: Number(r.id),
+        isoStart: r.startDate ? String(r.startDate) : "",
+        isoDue: r.dueDate ? String(r.dueDate) : "",
+        id: String(r.poNo ?? r.id),
+        product: String(r.product ?? "—"),
+        grade: String(r.grade ?? ""),
+        quantity: Number(r.quantity ?? 0),
+        unit: String(r.unit ?? "bags"),
+        priority: (r.priority ?? "medium") as ProductionOrder["priority"],
+        startDate: fmtDay(r.startDate as string),
+        dueDate: fmtDay(r.dueDate as string),
+        status: (r.status ?? "pending") as ProductionOrder["status"],
+        progress: Number(r.progress ?? 0),
+        line: String(r.line ?? "—"),
+      }))
+    : productionOrders;
+
+  const filtered = orders.filter(o => o.id.toLowerCase().includes(search.toLowerCase()) || o.product.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-5">
@@ -50,7 +117,7 @@ export default function ProductionOrdersPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {productionOrdersKpis.map((kpi, i) => <KpiCard key={kpi.id} data={kpi} index={i} />)}
+        {kpis.map((kpi, i) => <KpiCard key={kpi.id} data={kpi} index={i} />)}
       </div>
 
       {/* Toolbar */}
@@ -63,7 +130,7 @@ export default function ProductionOrdersPage() {
         <div className="flex items-center gap-2 shrink-0">
           <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all"><Filter className="w-3.5 h-3.5" />Filter</button>
           <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all"><Download className="w-3.5 h-3.5" />Export</button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all"><Plus className="w-3.5 h-3.5" />New Order</button>
+          <button onClick={() => setModal("create")} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all"><Plus className="w-3.5 h-3.5" />New Order</button>
         </div>
       </div>
 
@@ -73,7 +140,7 @@ export default function ProductionOrdersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/20">
-                {["Order ID", "Product", "Qty", "Priority", "Line", "Start", "Due", "Progress", "Status"].map(h => (
+                {["Order ID", "Product", "Qty", "Priority", "Line", "Start", "Due", "Progress", "Status", "Manage"].map(h => (
                   <th key={h} className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-left whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -104,12 +171,46 @@ export default function ProductionOrdersPage() {
                   <td className="px-5 py-3">
                     <Badge variant={statusVariant(order.status)} dot>{order.status.replace("-", " ")}</Badge>
                   </td>
+                  <td className="px-5 py-3.5">
+                    {order.dbId !== undefined ? (
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => setModal(order)} className="p-1 text-muted hover:text-primary transition-colors" title="Edit">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => removeRow(order)} className="p-1 text-muted hover:text-danger transition-colors" title="Delete">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted/40">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {modal && (
+        <RecordModal
+          title={modal === "create" ? "New Production Order" : `Edit ${modal.id}`}
+          fields={ORDER_FIELDS}
+          initial={
+            modal === "create"
+              ? {}
+              : {
+                  product: modal.product, grade: modal.grade, quantity: String(modal.quantity),
+                  unit: modal.unit, priority: modal.priority, line: modal.line,
+                  startDate: modal.isoStart ?? "", dueDate: modal.isoDue ?? "",
+                  progress: String(modal.progress), status: modal.status,
+                }
+          }
+          submitLabel={modal === "create" ? "Create Order" : "Save Changes"}
+          onSubmit={saveOrder}
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
   );
 }

@@ -41,6 +41,14 @@ import {
   downtimeData,
   type MfgKpi,
 } from "@/data/manufacturing-data";
+import { useApi } from "@/hooks/use-api";
+
+interface MfgReportsAnalytics {
+  kpis: MfgKpi[];
+  monthlyProdReport: typeof monthlyProdReport;
+  oeeByLine: typeof oeeByLine;
+  downtimeData: typeof downtimeData;
+}
 
 const iconMap: Record<string, React.ReactNode> = {
   FileBarChart: <FileBarChart className="w-4 h-4" />,
@@ -111,6 +119,11 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export default function ManufacturingReportsPage() {
   const [timeRange, setTimeRange] = useState("6m");
+  const live = useApi<MfgReportsAnalytics>("/manufacturing/reports/analytics");
+  const kpis = live?.kpis ?? reportsKpis;
+  const monthlyProd = live?.monthlyProdReport ?? monthlyProdReport;
+  const oeeLines = live?.oeeByLine ?? oeeByLine;
+  const downtime = live?.downtimeData ?? downtimeData;
 
   return (
     <div className="space-y-5">
@@ -125,7 +138,7 @@ export default function ManufacturingReportsPage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {reportsKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -165,7 +178,7 @@ export default function ManufacturingReportsPage() {
         <ChartCard title="Monthly Production Output" subtitle="Bags produced vs target goals (K bags)">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyProdReport} barGap={4}>
+              <BarChart data={monthlyProd} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
                 <XAxis dataKey="month" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
@@ -182,7 +195,7 @@ export default function ManufacturingReportsPage() {
         <ChartCard title="OEE Breakdown by Line" subtitle="Availability, Performance, and Quality metrics">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={oeeByLine} barGap={3}>
+              <BarChart data={oeeLines} barGap={3}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
                 <XAxis dataKey="line" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis domain={[60, 100]} tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -203,7 +216,7 @@ export default function ManufacturingReportsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={downtimeData}
+                    data={downtime}
                     dataKey="hours"
                     nameKey="reason"
                     cx="50%"
@@ -212,7 +225,7 @@ export default function ManufacturingReportsPage() {
                     outerRadius={70}
                     paddingAngle={2}
                   >
-                    {downtimeData.map((entry, idx) => (
+                    {downtime.map((entry, idx) => (
                       <Cell key={`cell-${idx}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -221,7 +234,7 @@ export default function ManufacturingReportsPage() {
               </ResponsiveContainer>
             </div>
             <div className="w-1/2 space-y-1.5 pl-2 text-[10px]">
-              {downtimeData.map((entry, idx) => (
+              {downtime.map((entry, idx) => (
                 <div key={idx} className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: entry.color }} />
                   <span className="text-muted truncate flex-1">{entry.reason}</span>

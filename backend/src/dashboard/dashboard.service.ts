@@ -66,14 +66,14 @@ export class DashboardService {
     const running = machines.filter((m) => m.status === 'Running').length;
 
     const kpis = [
-      { id: 'employees', label: 'Total Employees', value: String(employees), change: 3, changeLabel: 'vs last month', icon: 'Users2', color: 'blue' },
-      { id: 'visitors', label: 'Visitors Today', value: String(visitorsToday), change: 15, changeLabel: 'vs yesterday', icon: 'UserCheck', color: 'green' },
-      { id: 'gate-entries', label: 'Gate Entries', value: String(gateEntries), change: 8, changeLabel: 'since 6 AM', icon: 'ScanLine', color: 'purple' },
+      { id: 'employees', label: 'Total Employees', value: String(employees), changeLabel: '', icon: 'Users2', color: 'blue' },
+      { id: 'visitors', label: 'Visitors Today', value: String(visitorsToday), changeLabel: '', icon: 'UserCheck', color: 'green' },
+      { id: 'gate-entries', label: 'Gate Entries', value: String(gateEntries), changeLabel: '', icon: 'ScanLine', color: 'purple' },
       { id: 'material-in', label: 'Material In', value: String(materialIn), changeLabel: 'trucks today', icon: 'PackagePlus', color: 'blue' },
       { id: 'material-out', label: 'Material Out', value: String(materialOut), changeLabel: 'trucks today', icon: 'PackageMinus', color: 'orange' },
-      { id: 'prod-orders', label: 'Active Orders', value: String(activeOrders), change: 5, changeLabel: 'vs yesterday', icon: 'ClipboardList', color: 'purple' },
+      { id: 'prod-orders', label: 'Active Orders', value: String(activeOrders), changeLabel: '', icon: 'ClipboardList', color: 'purple' },
       { id: 'machines', label: 'Machines Running', value: `${running}/${machines.length}`, changeLabel: `${machines.length ? Math.round((running / machines.length) * 100) : 0}% operational`, icon: 'Cog', color: 'green' },
-      { id: 'qc-pending', label: 'QC Pending', value: String(qcPending), change: -3, changeLabel: 'vs yesterday', icon: 'FlaskConical', color: 'orange' },
+      { id: 'qc-pending', label: 'QC Pending', value: String(qcPending), changeLabel: '', icon: 'FlaskConical', color: 'orange' },
       { id: 'dispatch-ready', label: 'Dispatch Ready', value: String(dispatchReady), changeLabel: 'awaiting exit', icon: 'Truck', color: 'green' },
     ];
 

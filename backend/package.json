@@ -11,6 +11,7 @@
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "seed": "ts-node -P tsconfig.json src/seed/run-seed.ts",
+    "purge": "ts-node -P tsconfig.json src/seed/purge.ts",
     "wages:schema": "ts-node -P tsconfig.json src/wages/apply-schema.ts",
     "wages:seed": "ts-node -P tsconfig.json src/seed/seed-wages.ts",
     "lint": "eslint \"src/**/*.ts\""

@@ -22,7 +22,14 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { machinesKpis, mfgMachines, type MfgKpi } from "@/data/manufacturing-data";
+import { machinesKpis, mfgMachines, type MfgKpi, type MfgMachine } from "@/data/manufacturing-data";
+import { useApi } from "@/hooks/use-api";
+import { apiSend } from "@/lib/api";
+import { RecordModal } from "@/components/ui/record-modal";
+import { Pencil, Trash2 } from "lucide-react";
+
+const fmtDay = (d?: unknown) =>
+  d ? new Date(String(d)).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "—";
 
 const iconMap: Record<string, React.ReactNode> = {
   Cog: <Cog className="w-4 h-4" />,
@@ -75,15 +82,75 @@ function KpiCard({ data, index }: { data: MfgKpi; index: number }) {
           {Math.abs(data.change)}%
         </div>
       )}
+
     </div>
   );
 }
+
+type MachineRow = MfgMachine & { dbId?: number; isoLast?: string; isoNext?: string };
+
+const MACHINE_FIELDS = [
+  { key: "name", label: "Machine Name", required: true },
+  { key: "line", label: "Line", type: "select" as const, options: ["Line A", "Line B", "Line C", "Line D"] },
+  { key: "status", label: "Status", type: "select" as const, options: ["running", "idle", "maintenance"] },
+  { key: "uptime", label: "Uptime %", type: "number" as const },
+  { key: "temperature", label: "Temperature", placeholder: "e.g. 68°C" },
+  { key: "lastMaintenance", label: "Last Maintenance", type: "date" as const },
+  { key: "nextMaintenance", label: "Next Maintenance", type: "date" as const },
+  { key: "operator", label: "Operator" },
+  { key: "hoursToday", label: "Hours Today", type: "number" as const },
+];
+const MACHINE_NUM_KEYS = ["uptime", "hoursToday"];
 
 export default function MachinesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filtered = mfgMachines.filter((m) => {
+  const [version, setVersion] = useState(0);
+  const [modal, setModal] = useState<"create" | MachineRow | null>(null);
+  const kpiLive = useApi<{ kpis: MfgKpi[] }>("/manufacturing/machines/analytics", version);
+  const listLive = useApi<{ data: Record<string, unknown>[] }>("/manufacturing/machines?pageSize=50", version);
+
+  const saveMachine = async (values: Record<string, string>) => {
+    const payload: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(values)) {
+      if (v === "") continue;
+      payload[k] = MACHINE_NUM_KEYS.includes(k) ? Number(v) : v;
+    }
+    if (modal !== "create" && modal !== null && modal.dbId !== undefined) {
+      await apiSend("PATCH", `/manufacturing/machines/${modal.dbId}`, payload);
+    } else {
+      await apiSend("POST", "/manufacturing/machines", payload);
+    }
+    setVersion((v) => v + 1);
+  };
+
+  const removeMachine = async (row: MachineRow) => {
+    if (row.dbId === undefined || !window.confirm(`Delete ${row.name}?`)) return;
+    await apiSend("DELETE", `/manufacturing/machines/${row.dbId}`);
+    setVersion((v) => v + 1);
+  };
+
+  const kpis = kpiLive?.kpis ?? machinesKpis;
+  const machines: MachineRow[] = listLive
+    ? listLive.data.map((r) => ({
+        dbId: Number(r.id),
+        isoLast: r.lastMaintenance ? String(r.lastMaintenance) : "",
+        isoNext: r.nextMaintenance ? String(r.nextMaintenance) : "",
+        id: String(r.machineId ?? r.id),
+        name: String(r.name ?? "—"),
+        line: String(r.line ?? "—"),
+        status: (r.status ?? "idle") as MfgMachine["status"],
+        uptime: Number(r.uptime ?? 0),
+        temperature: String(r.temperature ?? "—"),
+        lastMaintenance: fmtDay(r.lastMaintenance),
+        nextMaintenance: fmtDay(r.nextMaintenance),
+        operator: String(r.operator ?? "—"),
+        hoursToday: Number(r.hoursToday ?? 0),
+      }))
+    : mfgMachines;
+
+  const filtered = machines.filter((m) => {
     const matchesSearch =
       m.name.toLowerCase().includes(search.toLowerCase()) ||
       m.line.toLowerCase().includes(search.toLowerCase()) ||
@@ -111,7 +178,7 @@ export default function MachinesPage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {machinesKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -145,7 +212,7 @@ export default function MachinesPage() {
             <Download className="w-3.5 h-3.5" />
             Export Logs
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button onClick={() => setModal("create")} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
             <Plus className="w-3.5 h-3.5" />
             Register Asset
           </button>
@@ -166,7 +233,19 @@ export default function MachinesPage() {
                 <h3 className="text-sm font-semibold text-white">{machine.name}</h3>
                 <p className="text-[11px] text-muted mt-0.5">{machine.line}</p>
               </div>
-              {getStatusBadge(machine.status)}
+              <div className="flex items-center gap-1.5">
+                {getStatusBadge(machine.status)}
+                {machine.dbId !== undefined && (
+                  <>
+                    <button onClick={() => setModal(machine)} className="p-1 text-muted hover:text-primary transition-colors" title="Edit">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => removeMachine(machine)} className="p-1 text-muted hover:text-danger transition-colors" title="Delete">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Diagnostics Stats */}
@@ -230,6 +309,26 @@ export default function MachinesPage() {
           </div>
         )}
       </div>
+
+      {modal && (
+        <RecordModal
+          title={modal === "create" ? "Register Asset" : `Edit ${modal.name}`}
+          fields={MACHINE_FIELDS}
+          initial={
+            modal === "create"
+              ? {}
+              : {
+                  name: modal.name, line: modal.line, status: modal.status,
+                  uptime: String(modal.uptime), temperature: modal.temperature,
+                  lastMaintenance: modal.isoLast ?? "", nextMaintenance: modal.isoNext ?? "",
+                  operator: modal.operator, hoursToday: String(modal.hoursToday),
+                }
+          }
+          submitLabel={modal === "create" ? "Register" : "Save Changes"}
+          onSubmit={saveMachine}
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
   );
 }

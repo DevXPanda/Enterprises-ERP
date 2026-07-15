@@ -1,4 +1,3 @@
-// Resource registry types and the defineResource() helper.
 export type ColumnType =
   | 'text'
   | 'int'
@@ -16,28 +15,23 @@ export interface ColumnDef {
 }
 
 export interface ResourceDef {
-
   path: string;
-
+  /** Human label, e.g. "Current Stock" */
   label: string;
-
   table: string;
-
   schema?: string;
-
   pk?: 'serial' | 'uuid';
-
   external?: boolean;
-
+  /** Rows carry tenant_id; the service injects the default tenant on create */
   tenantScoped?: boolean;
-
+  /** DELETE sets deleted_at instead of removing the row */
   softDelete?: boolean;
   columns: ColumnDef[];
-
+  /** Keys used for ?search= (defaults to all text columns) */
   search: string[];
-
+  /** Auto-generated business code, e.g. GRN-1005 on insert */
   code?: { field: string; prefix: string };
-
+  /** Seed rows — arrays aligned with `columns` order */
   seed: unknown[][];
 }
 
@@ -52,6 +46,11 @@ export interface DefineOptions {
   softDelete?: boolean;
 }
 
+/**
+ * Compact resource declaration.
+ * `cols` is space-separated keys with optional :type suffix
+ * (default "text"), e.g. "grnNo vendor quantity:num receivedAt:ts".
+ */
 export function defineResource(
   path: string,
   label: string,

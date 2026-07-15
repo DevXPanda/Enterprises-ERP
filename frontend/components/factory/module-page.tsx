@@ -2,15 +2,34 @@
 
 // ============================================================
 //  ModulePage — Reusable Enterprise Page Template
-//  Used by every Factory sub-page. Zero duplication.
-//  Renders: PageHeader · Search/Filter/Export/Add · Interactive Table
+//  Used by every Factory sub-page (and Wages read models).
+//  Fetches live data from the NestJS API — the endpoint mirrors
+//  the page route unless `endpoint` is given. Full CRUD: search,
+//  pagination, add/edit modal, delete, CSV export.
 // ============================================================
 
-import { useState, useEffect } from "react";
-import { Search, Filter, Download, Plus, Trash2, Eye, Edit } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import {
+  Search,
+  Download,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  RefreshCw,
+  AlertTriangle,
+} from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  apiGet,
+  apiSend,
+  formatCell,
+  type ApiColumn,
+  type ListResponse,
+} from "@/lib/api";
 
 export interface ModuleColumn {
   key: string;
@@ -28,6 +47,26 @@ interface ModulePageProps {
   breadcrumbs: BreadcrumbItem[];
   columns: ModuleColumn[];
   addNewLabel?: string;
+  /** API path override; defaults to the current route (paths mirror). */
+  endpoint?: string;
+  /** Hide Add/Edit/Delete for computed read models. */
+  readOnly?: boolean;
+}
+
+type Row = Record<string, unknown>;
+
+const SKELETON_WIDTHS: readonly string[] = ["72%", "58%", "80%", "64%", "68%"];
+const PAGE_SIZE = 10;
+
+function statusVariant(value: string): "success" | "warning" | "danger" | "default" | null {
+  const v = value.toLowerCase();
+  if (/(active|present|passed|cleared|ready|approved|paid|running|synced|published|valid|verified|ok|used|exited|completed|dispatched|inside|in)$/.test(v) || /^(active|present|passed|cleared|ready|approved|paid|running|completed|verified)/.test(v))
+    return "success";
+  if (/(pending|awaiting|progress|testing|queued|scheduled|generating|accruing|loading|waiting|working|open|issued|planned|released|retrying|syncing|half)/.test(v))
+    return "warning";
+  if (/(failed|rejected|expired|absent|critical|overdue|blacklisted|inactive|escalated|cancelled|low|maintenance|hold|suspended)/.test(v))
+    return "danger";
+  return null;
 }
 
 export function ModulePage({
@@ -36,107 +75,215 @@ export function ModulePage({
   breadcrumbs,
   columns,
   addNewLabel = "Add New",
+  endpoint,
+  readOnly = false,
 }: ModulePageProps) {
+  const pathname = usePathname();
+  const apiPath = endpoint ?? pathname;
+
   const [search, setSearch] = useState("");
-  const [data, setData] = useState<any[]>([]);
+  const [debounced, setDebounced] = useState("");
+  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [apiColumns, setApiColumns] = useState<ApiColumn[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [paginated, setPaginated] = useState(true);
 
-  // Generate realistic mock data on mount to avoid Next.js hydration mismatch
-  useEffect(() => {
-    const mockRows = Array.from({ length: 6 }).map((_, index) => {
-      const row: any = { id: index };
-      columns.forEach((col) => {
-        row[col.key] = generateMockVal(col.key, index, title);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiGet<ListResponse>(apiPath, {
+        search: debounced || undefined,
+        page,
+        pageSize: PAGE_SIZE,
       });
-      return row;
-    });
-    setData(mockRows);
-  }, [columns, title]);
+      setRows(res.data ?? []);
+      setApiColumns(res.columns ?? []);
+      setTotal(res.total ?? res.data?.length ?? 0);
+      setTotalPages(res.totalPages ?? 1);
+      setPaginated(res.totalPages !== undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reach the API");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPath, debounced, page]);
 
-  const handleDelete = (rowId: number) => {
-    setData((prev) => prev.filter((r) => r.id !== rowId));
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const onSearch = (value: string) => {
+    setSearch(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setPage(1);
+      setDebounced(value);
+    }, 350);
   };
 
-  const handleAddRow = () => {
-    const newId = data.length > 0 ? Math.max(...data.map((r) => r.id)) + 1 : 1;
-    const newRow: any = { id: newId };
-    columns.forEach((col) => {
-      newRow[col.key] = generateMockVal(col.key, newId, title);
-    });
-    setData((prev) => [newRow, ...prev]);
+  const colType = useMemo(() => {
+    const map = new Map<string, ApiColumn["type"]>();
+    for (const c of apiColumns) map.set(c.key, c.type);
+    return map;
+  }, [apiColumns]);
+
+  // Client-side filter fallback for read-only endpoints without ?search=
+  const visibleRows = useMemo(() => {
+    if (paginated || !debounced) return rows;
+    const q = debounced.toLowerCase();
+    return rows.filter((row) =>
+      columns.some((c) => String(row[c.key] ?? "").toLowerCase().includes(q)),
+    );
+  }, [rows, columns, debounced, paginated]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({});
+    setModalError(null);
+    setModalOpen(true);
   };
 
-  const filteredData = data.filter((row) => {
-    return columns.some((col) => {
-      const val = row[col.key];
-      return val && String(val).toLowerCase().includes(search.toLowerCase());
-    });
-  });
+  const openEdit = (row: Row) => {
+    setEditing(row);
+    const initial: Record<string, string> = {};
+    for (const col of columns) {
+      const v = row[col.key];
+      initial[col.key] = v === null || v === undefined ? "" : String(v);
+    }
+    setForm(initial);
+    setModalError(null);
+    setModalOpen(true);
+  };
 
-  const getStatusBadge = (val: string) => {
-    const s = String(val).toLowerCase();
-    if (s === "active" || s === "present" || s === "approved" || s === "verified" || s === "completed" || s === "in") {
-      return <Badge variant="success" dot>{val}</Badge>;
+  const submit = async () => {
+    setSaving(true);
+    setModalError(null);
+    try {
+      const payload: Record<string, unknown> = {};
+      for (const col of columns) {
+        const raw = form[col.key];
+        if (raw === undefined || raw === "") continue;
+        const t = colType.get(col.key);
+        payload[col.key] = t === "int" || t === "num" ? Number(raw) : raw;
+      }
+      if (editing) {
+        await apiSend("PATCH", `${apiPath}/${editing.id}`, payload);
+      } else {
+        await apiSend("POST", apiPath, payload);
+      }
+      setModalOpen(false);
+      await load();
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
     }
-    if (s === "pending" || s === "in-progress" || s === "half-day" || s === "warning") {
-      return <Badge variant="warning" dot>{val}</Badge>;
+  };
+
+  const remove = async (row: Row) => {
+    if (!window.confirm(`Delete this ${title.replace(/s$/, "").toLowerCase()} record?`)) return;
+    try {
+      await apiSend("DELETE", `${apiPath}/${row.id}`);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Delete failed");
     }
-    if (s === "inactive" || s === "absent" || s === "rejected" || s === "suspended" || s === "out") {
-      return <Badge variant="danger" dot>{val}</Badge>;
-    }
-    return <Badge variant="default" dot>{val}</Badge>;
+  };
+
+  const exportCsv = () => {
+    const header = columns.map((c) => c.label).join(",");
+    const lines = visibleRows.map((row) =>
+      columns
+        .map((c) => {
+          const cell = formatCell(row[c.key], colType.get(c.key)).replace(/"/g, '""');
+          return /[",\n]/.test(cell) ? `"${cell}"` : cell;
+        })
+        .join(","),
+    );
+    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${title.toLowerCase().replace(/\s+/g, "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <PageHeader
-        title={title}
-        description={description}
-        breadcrumbs={breadcrumbs}
-      />
+      <PageHeader title={title} description={description} breadcrumbs={breadcrumbs} />
 
       {/* Action Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
-        {/* Search */}
         <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => onSearch(e.target.value)}
             placeholder={`Search ${title.toLowerCase()}…`}
             className="w-full pl-9 pr-4 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white placeholder:text-muted/50 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
           />
         </div>
 
-        {/* Buttons */}
         <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-end sm:justify-start">
           <button
             type="button"
+            onClick={load}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all"
           >
-            <Filter className="w-3.5 h-3.5" />
-            Filter
+            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+            Refresh
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all"
+            onClick={exportCsv}
+            disabled={visibleRows.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all disabled:opacity-40"
           >
             <Download className="w-3.5 h-3.5" />
             Export
           </button>
-          <button
-            onClick={handleAddRow}
-            type="button"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {addNewLabel}
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {addNewLabel}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Interactive Table */}
+      {/* API error */}
+      {error && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-danger/30 bg-danger/10 text-sm text-danger animate-fade-in">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="flex-1">
+            API unreachable: {error}. Start the backend with <code>cd backend && npm start</code>
+          </span>
+          <button onClick={load} className="text-xs font-semibold underline underline-offset-2">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Table */}
       <div className="glass-card overflow-hidden animate-fade-in">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -150,153 +297,199 @@ export function ModulePage({
                     {col.label}
                   </th>
                 ))}
-                <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-right whitespace-nowrap">
-                  Actions
-                </th>
+                {!readOnly && (
+                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-right whitespace-nowrap">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-t border-border/10 hover:bg-white/[0.02] transition-colors"
-                >
-                  {columns.map((col) => {
-                    const cellVal = row[col.key];
-                    const isStatus = col.key.toLowerCase().includes("status") || col.key.toLowerCase() === "qrcheck" || cellVal === "Verified" || cellVal === "Scan Pending" || cellVal === "active" || cellVal === "leave" || cellVal === "suspended";
-                    return (
-                      <td key={col.key} className="px-5 py-3.5 text-xs text-white">
-                        {isStatus ? getStatusBadge(cellVal) : String(cellVal || "—")}
-                      </td>
-                    );
-                  })}
-                  <td className="px-5 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button className="p-1 text-muted hover:text-white transition-colors" title="View details">
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button className="p-1 text-muted hover:text-primary transition-colors" title="Edit row">
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        className="p-1 text-muted hover:text-danger transition-colors"
-                        title="Delete row"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredData.length === 0 && (
+              {loading
+                ? SKELETON_WIDTHS.map((width, rowIdx) => (
+                    <tr key={`s-${rowIdx}`} className="border-t border-border/10">
+                      {columns.map((col, colIdx) => (
+                        <td key={col.key} className="px-5 py-3.5">
+                          <div
+                            className="h-3 bg-white/[0.06] rounded-full animate-pulse"
+                            style={{
+                              width:
+                                colIdx === 0
+                                  ? "75%"
+                                  : colIdx === columns.length - 1
+                                  ? "45%"
+                                  : width,
+                              animationDelay: `${rowIdx * 60}ms`,
+                            }}
+                          />
+                        </td>
+                      ))}
+                      {!readOnly && <td className="px-5 py-3.5" />}
+                    </tr>
+                  ))
+                : visibleRows.map((row, rowIdx) => (
+                    <tr
+                      key={String(row.id ?? rowIdx)}
+                      className="border-t border-border/10 hover:bg-white/[0.02] transition-colors"
+                    >
+                      {columns.map((col, colIdx) => {
+                        const display = formatCell(row[col.key], colType.get(col.key));
+                        const isStatusCol =
+                          col.key.toLowerCase().includes("status") ||
+                          col.key === "result" ||
+                          col.key === "rating" ||
+                          col.key === "attendance" ||
+                          col.key === "priority";
+                        const variant =
+                          isStatusCol && display !== "—" ? statusVariant(display) : null;
+                        return (
+                          <td key={col.key} className="px-5 py-3.5 text-xs whitespace-nowrap">
+                            {variant ? (
+                              <Badge variant={variant} dot>
+                                {display}
+                              </Badge>
+                            ) : (
+                              <span className={colIdx === 0 ? "font-semibold text-white" : "text-white/85"}>
+                                {display}
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {!readOnly && (
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => openEdit(row)}
+                              className="p-1 text-muted hover:text-primary transition-colors"
+                              title="Edit row"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => remove(row)}
+                              className="p-1 text-muted hover:text-danger transition-colors"
+                              title="Delete row"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+              {!loading && !error && visibleRows.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length + 1} className="px-5 py-8 text-center text-xs text-muted">
-                    No matching records found.
+                  <td
+                    colSpan={columns.length + (readOnly ? 0 : 1)}
+                    className="px-5 py-8 text-center text-xs text-muted"
+                  >
+                    No {title.toLowerCase()} records
+                    {debounced ? ` matching “${debounced}”` : " yet"}.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Footer: count + pagination */}
+        {!error && (visibleRows.length > 0 || loading) && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-border/10 text-xs text-muted">
+            <span>{loading ? "Loading…" : `${total} record${total === 1 ? "" : "s"}`}</span>
+            {paginated && totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                  className="px-2.5 py-1 rounded-lg border border-border/40 hover:bg-white/5 disabled:opacity-40 transition-all"
+                >
+                  Prev
+                </button>
+                <span>
+                  Page {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || loading}
+                  className="px-2.5 py-1 rounded-lg border border-border/40 hover:bg-white/5 disabled:opacity-40 transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Create / Edit modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
+          <div className="glass-card w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-white">
+                {editing ? `Edit ${title}` : addNewLabel}
+              </h2>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-1.5 rounded-lg text-muted hover:text-white hover:bg-white/5"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {columns.map((col) => {
+                const t = colType.get(col.key);
+                return (
+                  <label key={col.key} className="space-y-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">
+                      {col.label}
+                    </span>
+                    <input
+                      type={
+                        t === "int" || t === "num"
+                          ? "number"
+                          : t === "date"
+                          ? "date"
+                          : t === "ts"
+                          ? "datetime-local"
+                          : "text"
+                      }
+                      value={form[col.key] ?? ""}
+                      onChange={(e) => setForm((f) => ({ ...f, [col.key]: e.target.value }))}
+                      className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all"
+                    />
+                  </label>
+                );
+              })}
+            </div>
+
+            {modalError && (
+              <p className="text-xs text-danger flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> {modalError}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 hover:bg-white/5 hover:text-white transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submit}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all disabled:opacity-50"
+              >
+                {saving ? "Saving…" : editing ? "Save Changes" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
-
-// ============================================================
-//  Mock Value Generator Helper
-// ============================================================
-function generateMockVal(key: string, index: number, title: string) {
-  const k = key.toLowerCase();
-  
-  if (k.includes("id") || k.includes("no") || k === "code") {
-    if (k.includes("emp")) return `EMP-0${421 + index}`;
-    if (k.includes("visit")) return `VIS-0${712 + index}`;
-    if (k.includes("pass") || k.includes("gate")) return `GP-88${31 + index}`;
-    if (k.includes("veh") || k.includes("truck")) return `MH-12-GP-${4108 + index}`;
-    if (k.includes("order")) return `ORD-52${23 + index}`;
-    if (k.includes("batch")) return `BAT-99${12 + index}`;
-    return `ID-0${184 + index}`;
-  }
-  
-  if (k.includes("name") || k.includes("to") || k === "operator" || k === "author" || k === "employee") {
-    const names = ["Ramesh Kumar", "Amit Sharma", "Vikram Singh", "Suresh Patel", "Sunita Devi", "Anil Mehta", "Pradeep G.", "Karan Johar", "Mahesh Sen"];
-    return names[index % names.length];
-  }
-  
-  if (k.includes("dept") || k === "department") {
-    const depts = ["Production", "Packing", "Quality Control", "Maintenance", "Store", "Dispatch"];
-    return depts[index % depts.length];
-  }
-  
-  if (k.includes("desig") || k.includes("role")) {
-    const roles = ["Line Supervisor", "Machine Operator", "QC Analyst", "Material Loader", "Maintenance Tech"];
-    return roles[index % roles.length];
-  }
-  
-  if (k.includes("shift")) {
-    const shifts = ["Shift A", "Shift B", "Shift C"];
-    return shifts[index % shifts.length];
-  }
-  
-  if (k.includes("time") || k === "in" || k === "out") {
-    if (k.includes("in")) return `06:${10 + index * 5}`;
-    if (k.includes("out")) return `14:${index * 5}`;
-    return `${10 + index}:30 AM`;
-  }
-  
-  if (k.includes("date") || k === "validfrom" || k === "validto" || k === "updated") {
-    return `${10 + index} Jul 2026`;
-  }
-  
-  if (k.includes("status")) {
-    const statuses = ["Active", "Pending", "Approved", "Completed", "In Progress", "Verified"];
-    return statuses[index % statuses.length];
-  }
-  
-  if (k.includes("material") || k === "item" || k.includes("product")) {
-    const mats = ["Limestone", "Gypsum", "Coal (Thermal)", "OPC 53 Grade", "PPC Cement", "Fly Ash"];
-    return mats[index % mats.length];
-  }
-  
-  if (k.includes("qty") || k.includes("quantity") || k === "produced" || k === "target" || k === "employees" || k === "total") {
-    return (1500 + index * 250).toLocaleString();
-  }
-  
-  if (k.includes("cost") || k.includes("price") || k.includes("amount") || k === "grade") {
-    if (k === "grade") {
-      const grades = ["53 Grade", "43 Grade", "PSC", "PPC", "Premium"];
-      return grades[index % grades.length];
-    }
-    return `₹${(15000 + index * 4200).toLocaleString("en-IN")}`;
-  }
-  
-  if (k.includes("bank") || k.includes("account")) {
-    return `******${2040 + index * 12}`;
-  }
-  
-  if (k.includes("qr") || k.includes("verification")) {
-    return index % 2 === 0 ? "Verified" : "Scan Pending";
-  }
-  
-  if (k.includes("purpose") || k.includes("reason")) {
-    const reasons = ["Raw Material Delivery", "Client Visit", "Equipment Repair", "Audit Check", "Shift Handover"];
-    return reasons[index % reasons.length];
-  }
-  
-  if (k.includes("phone") || k.includes("contact")) {
-    return `+91 98765 0000${index}`;
-  }
-  
-  if (k.includes("vehicle") || k === "truck") {
-    return `MH-12-GP-${4000 + index}`;
-  }
-  
-  if (k.includes("doc")) {
-    const docs = ["Aadhaar Card", "PAN Card", "Labor License", "Driving License", "Gate Pass ID"];
-    return docs[index % docs.length];
-  }
-  
-  return `${title} Item ${index + 1}`;
 }

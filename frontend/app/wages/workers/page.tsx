@@ -15,11 +15,14 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  X,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { workersKpis, workersList, type WagesKpi } from "@/data/wages-data";
+import { workersKpis, workersList, type WagesKpi, type Worker } from "@/data/wages-data";
+import { useApi } from "@/hooks/use-api";
+import { apiSend } from "@/lib/api";
 
 const iconMap: Record<string, React.ReactNode> = {
   Users: <Users className="w-4 h-4" />,
@@ -78,7 +81,59 @@ function KpiCard({ data, index }: { data: WagesKpi; index: number }) {
 
 export default function WorkersPage() {
   const [search, setSearch] = useState("");
-  const filtered = workersList.filter(
+  const [version, setVersion] = useState(0);
+  const live = useApi<{ kpis: WagesKpi[]; data: Record<string, unknown>[] }>("/wages/workers", version);
+
+  // Add Worker modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    department: "Production",
+    type: "permanent",
+    dailyRate: "",
+    bankAccount: "",
+    shift: "Morning",
+  });
+  const [saving, setSaving] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const submitWorker = async () => {
+    setSaving(true);
+    setModalError(null);
+    try {
+      await apiSend("POST", "/wages/workers", {
+        name: form.name,
+        department: form.department,
+        type: form.type,
+        dailyRate: Number(form.dailyRate),
+        bankAccount: form.bankAccount || undefined,
+        shift: form.shift,
+      });
+      setModalOpen(false);
+      setForm({ name: "", department: "Production", type: "permanent", dailyRate: "", bankAccount: "", shift: "Morning" });
+      setVersion((v) => v + 1); // refetch the live list
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : "Failed to add worker — is the backend running?");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const kpis = live?.kpis ?? workersKpis;
+  const workers: Worker[] = live
+    ? live.data.map((r) => ({
+        id: String(r.id ?? "—"),
+        name: String(r.name ?? "—"),
+        department: String(r.department ?? "—"),
+        type: (r.type ?? "permanent") as Worker["type"],
+        dailyRate: Number(r.dailyRate ?? 0),
+        bankAccount: String(r.bankAccount ?? "******0000"),
+        attendancePct: Number(r.attendancePct ?? 0),
+        status: (r.status ?? "active") as Worker["status"],
+      }))
+    : workersList;
+
+  const filtered = workers.filter(
     (worker) =>
       worker.name.toLowerCase().includes(search.toLowerCase()) ||
       worker.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -104,7 +159,7 @@ export default function WorkersPage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {workersKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -130,7 +185,10 @@ export default function WorkersPage() {
             <Download className="w-3.5 h-3.5" />
             Export Directory
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all"
+          >
             <Plus className="w-3.5 h-3.5" />
             Add Worker
           </button>
@@ -201,6 +259,111 @@ export default function WorkersPage() {
           </table>
         </div>
       </div>
+
+      {/* Add Worker modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
+          <div className="glass-card w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-white">Add Worker</h2>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-1.5 rounded-lg text-muted hover:text-white hover:bg-white/5"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="space-y-1 sm:col-span-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">Full Name *</span>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Arun Sharma"
+                  className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">Department</span>
+                <input
+                  type="text"
+                  value={form.department}
+                  onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+                  className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">Type</span>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                  className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all cursor-pointer"
+                >
+                  <option value="permanent" className="bg-navy-100">Permanent</option>
+                  <option value="contractual" className="bg-navy-100">Contractual</option>
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">Daily Rate (₹) *</span>
+                <input
+                  type="number"
+                  value={form.dailyRate}
+                  onChange={(e) => setForm((f) => ({ ...f, dailyRate: e.target.value }))}
+                  placeholder="e.g. 550"
+                  className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">Shift</span>
+                <select
+                  value={form.shift}
+                  onChange={(e) => setForm((f) => ({ ...f, shift: e.target.value }))}
+                  className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all cursor-pointer"
+                >
+                  <option value="Morning" className="bg-navy-100">Morning</option>
+                  <option value="Evening" className="bg-navy-100">Evening</option>
+                  <option value="Night" className="bg-navy-100">Night</option>
+                </select>
+              </label>
+              <label className="space-y-1 sm:col-span-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">Bank Account (optional)</span>
+                <input
+                  type="text"
+                  value={form.bankAccount}
+                  onChange={(e) => setForm((f) => ({ ...f, bankAccount: e.target.value }))}
+                  placeholder="Account number"
+                  className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all"
+                />
+              </label>
+            </div>
+
+            {modalError && (
+              <p className="text-xs text-danger flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> {modalError}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 hover:bg-white/5 hover:text-white transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitWorker}
+                disabled={saving || !form.name || !form.dailyRate}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all disabled:opacity-50"
+              >
+                {saving ? "Adding…" : "Add Worker"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

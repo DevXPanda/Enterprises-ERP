@@ -41,6 +41,14 @@ import {
   categoryCost,
   type WagesKpi,
 } from "@/data/wages-data";
+import { useApi } from "@/hooks/use-api";
+
+interface WagesReportsAnalytics {
+  kpis: WagesKpi[];
+  monthlyWageReport: typeof monthlyWageReport;
+  overtimeTrend: typeof overtimeTrend;
+  categoryCost: typeof categoryCost;
+}
 
 const iconMap: Record<string, React.ReactNode> = {
   FileText: <FileText className="w-4 h-4" />,
@@ -109,6 +117,11 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export default function WagesReportsPage() {
+  const live = useApi<WagesReportsAnalytics>("/wages/reports/analytics");
+  const kpis = live?.kpis ?? wagesReportsKpis;
+  const monthlyCosts = live?.monthlyWageReport ?? monthlyWageReport;
+  const otTrend = live?.overtimeTrend ?? overtimeTrend;
+  const catCost = live?.categoryCost ?? categoryCost;
   const [timeRange, setTimeRange] = useState("6m");
 
   return (
@@ -124,7 +137,7 @@ export default function WagesReportsPage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {wagesReportsKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -164,7 +177,7 @@ export default function WagesReportsPage() {
         <ChartCard title="Monthly Wage Expense" subtitle="Total payout cost vs monthly targets (₹ Lakhs)">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyWageReport} barGap={4}>
+              <BarChart data={monthlyCosts} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
                 <XAxis dataKey="month" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -181,7 +194,7 @@ export default function WagesReportsPage() {
         <ChartCard title="Overtime Expense Trend" subtitle="Monthly OT hours vs total cost (₹ Thousands)">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={overtimeTrend}>
+              <LineChart data={otTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
                 <XAxis dataKey="month" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="left" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
@@ -202,7 +215,7 @@ export default function WagesReportsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={categoryCost}
+                    data={catCost}
                     dataKey="cost"
                     nameKey="category"
                     cx="50%"
@@ -211,7 +224,7 @@ export default function WagesReportsPage() {
                     outerRadius={70}
                     paddingAngle={2}
                   >
-                    {categoryCost.map((entry, idx) => (
+                    {catCost.map((entry, idx) => (
                       <Cell key={`cell-${idx}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -220,7 +233,7 @@ export default function WagesReportsPage() {
               </ResponsiveContainer>
             </div>
             <div className="w-1/2 space-y-2 pl-2 text-[10px]">
-              {categoryCost.map((entry, idx) => (
+              {catCost.map((entry, idx) => (
                 <div key={idx} className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: entry.color }} />

@@ -19,7 +19,10 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { attendanceKpis, attendanceList, type WagesKpi } from "@/data/wages-data";
+import { attendanceKpis, attendanceList, type WagesKpi, type WorkerAttendance } from "@/data/wages-data";
+import { useApi } from "@/hooks/use-api";
+import { apiSend } from "@/lib/api";
+import { RecordModal } from "@/components/ui/record-modal";
 
 const iconMap: Record<string, React.ReactNode> = {
   UserCheck: <UserCheck className="w-4 h-4" />,
@@ -80,7 +83,37 @@ export default function AttendancePage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filtered = attendanceList.filter((log) => {
+  const [version, setVersion] = useState(0);
+  const [modal, setModal] = useState(false);
+  const live = useApi<{ kpis: WagesKpi[]; data: Record<string, unknown>[] }>("/wages/attendance", version);
+
+  const logAttendance = async (values: Record<string, string>) => {
+    await apiSend("POST", "/wages/attendance", {
+      empId: values.empId,
+      date: values.date,
+      status: values.status,
+      checkIn: values.checkIn || undefined,
+      checkOut: values.checkOut || undefined,
+    });
+    setVersion((v) => v + 1);
+  };
+
+  const kpis = live?.kpis ?? attendanceKpis;
+  const records: WorkerAttendance[] = live
+    ? live.data.map((r) => ({
+        id: String(r.id ?? "—"),
+        name: String(r.name ?? "—"),
+        date: String(r.date ?? "—"),
+        shift: String(r.shift ?? "—"),
+        inTime: String(r.inTime ?? "—"),
+        outTime: String(r.outTime ?? "—"),
+        workingHours: Number(r.workingHours ?? 0),
+        otHours: Number(r.otHours ?? 0),
+        status: (r.status ?? "present") as WorkerAttendance["status"],
+      }))
+    : attendanceList;
+
+  const filtered = records.filter((log) => {
     const matchesSearch =
       log.name.toLowerCase().includes(search.toLowerCase()) ||
       log.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -109,7 +142,7 @@ export default function AttendancePage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {attendanceKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -144,7 +177,7 @@ export default function AttendancePage() {
             <Download className="w-3.5 h-3.5" />
             Export Timesheet
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button onClick={() => setModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
             <Plus className="w-3.5 h-3.5" />
             Log Attendance
           </button>
@@ -203,6 +236,22 @@ export default function AttendancePage() {
           </table>
         </div>
       </div>
+
+      {modal && (
+        <RecordModal
+          title="Log Attendance"
+          fields={[
+            { key: "empId", label: "Worker ID", required: true, placeholder: "e.g. W-001" },
+            { key: "date", label: "Date", type: "date", required: true },
+            { key: "status", label: "Status", type: "select", options: ["present", "absent", "half-day", "leave"] },
+            { key: "checkIn", label: "Check-In", type: "time" },
+            { key: "checkOut", label: "Check-Out", type: "time" },
+          ]}
+          submitLabel="Log Entry"
+          onSubmit={logAttendance}
+          onClose={() => setModal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Save,
   CheckCircle,
+  AlertTriangle,
   Eye,
   EyeOff,
   Key,
@@ -14,6 +15,15 @@ import {
   Trash2,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { apiGet, apiSend } from "@/lib/api";
+
+interface AdminProfile {
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  avatarUrl: string | null;
+}
 
 export default function SettingsPage() {
   // Admin Profile Info
@@ -29,11 +39,50 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  // Load the stored profile from the API
+  useEffect(() => {
+    apiGet<AdminProfile>("/settings/profile")
+      .then((p) => {
+        setAdminName(p.name);
+        setAdminEmail(p.email);
+        setAdminPhone(p.phone ?? "");
+        setAvatarUrl(p.avatarUrl);
+      })
+      .catch(() => {}); // offline -> keep defaults
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await apiSend("PATCH", "/settings/profile", {
+        name: adminName,
+        email: adminEmail,
+        phone: adminPhone,
+        avatarUrl,
+      });
+      if (currentPassword || newPassword || confirmPassword) {
+        await apiSend("POST", "/settings/change-password", {
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePhotoUpload = () => {
@@ -67,6 +116,12 @@ export default function SettingsPage() {
         <div className="flex items-center gap-2 p-3.5 bg-success/15 border border-success/30 text-success-light rounded-xl text-xs font-semibold animate-fade-in">
           <CheckCircle className="w-4 h-4 text-success" />
           Profile settings and security credentials updated successfully.
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center gap-2 p-3.5 bg-danger/15 border border-danger/30 text-danger rounded-xl text-xs font-semibold animate-fade-in">
+          <AlertTriangle className="w-4 h-4" />
+          {error}
         </div>
       )}
 
@@ -246,10 +301,11 @@ export default function SettingsPage() {
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-5 py-2 bg-primary hover:bg-primary-dark text-xs font-semibold text-white rounded-xl transition-all"
+              disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-2 bg-primary hover:bg-primary-dark text-xs font-semibold text-white rounded-xl transition-all disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" />
-              Save Changes
+              {saving ? "Saving…" : "Save Changes"}
             </button>
           </div>
         </div>

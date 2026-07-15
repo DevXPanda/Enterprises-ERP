@@ -18,7 +18,14 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { bomKpis, bomItems, type MfgKpi } from "@/data/manufacturing-data";
+import { bomKpis, bomItems, type MfgKpi, type BomItem } from "@/data/manufacturing-data";
+import { useApi } from "@/hooks/use-api";
+import { apiSend } from "@/lib/api";
+import { RecordModal } from "@/components/ui/record-modal";
+import { Pencil, Trash2 } from "lucide-react";
+
+const fmtDate = (d?: unknown) =>
+  d ? new Date(String(d)).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 // Custom GitBranch icon stand-in since we want to be safe with lucide icons
 import { GitCommit as GitBranch } from "lucide-react";
@@ -78,9 +85,65 @@ function KpiCard({ data, index }: { data: MfgKpi; index: number }) {
   );
 }
 
+type BomRow = BomItem & { dbId?: number; isoUpdated?: string };
+
+const BOM_FIELDS = [
+  { key: "product", label: "Product", required: true },
+  { key: "grade", label: "Grade" },
+  { key: "materials", label: "Materials Count", type: "number" as const },
+  { key: "costPerUnit", label: "Cost / Bag (₹)", type: "number" as const, required: true },
+  { key: "version", label: "Version" },
+  { key: "createdBy", label: "Created By" },
+  { key: "lastUpdated", label: "Last Updated", type: "date" as const },
+  { key: "status", label: "Status", type: "select" as const, options: ["active", "draft", "archived"] },
+];
+const BOM_NUM_KEYS = ["materials", "costPerUnit"];
+
 export default function BomPage() {
   const [search, setSearch] = useState("");
-  const filtered = bomItems.filter(
+  const [version, setVersion] = useState(0);
+  const [modal, setModal] = useState<"create" | BomRow | null>(null);
+  const kpiLive = useApi<{ kpis: MfgKpi[] }>("/manufacturing/bom/analytics", version);
+  const listLive = useApi<{ data: Record<string, unknown>[] }>("/manufacturing/bom?pageSize=50", version);
+
+  const saveBom = async (values: Record<string, string>) => {
+    const payload: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(values)) {
+      if (v === "") continue;
+      payload[k] = BOM_NUM_KEYS.includes(k) ? Number(v) : v;
+    }
+    if (modal !== "create" && modal?.dbId !== undefined) {
+      await apiSend("PATCH", `/manufacturing/bom/${modal.dbId}`, payload);
+    } else {
+      await apiSend("POST", "/manufacturing/bom", payload);
+    }
+    setVersion((v) => v + 1);
+  };
+
+  const removeRow = async (row: BomRow) => {
+    if (row.dbId === undefined || !window.confirm(`Delete ${row.id}?`)) return;
+    await apiSend("DELETE", `/manufacturing/bom/${row.dbId}`);
+    setVersion((v) => v + 1);
+  };
+
+  const kpis = kpiLive?.kpis ?? bomKpis;
+  const items: BomRow[] = listLive
+    ? listLive.data.map((r) => ({
+        dbId: Number(r.id),
+        isoUpdated: r.lastUpdated ? String(r.lastUpdated) : "",
+        id: String(r.bomNo ?? r.id),
+        product: String(r.product ?? "—"),
+        grade: String(r.grade ?? ""),
+        materials: Number(r.materials ?? 0),
+        costPerUnit: Number(r.costPerUnit ?? 0),
+        lastUpdated: fmtDate(r.lastUpdated),
+        status: (r.status ?? "draft") as BomItem["status"],
+        version: String(r.version ?? "v1.0"),
+        createdBy: String(r.createdBy ?? "—"),
+      }))
+    : bomItems;
+
+  const filtered = items.filter(
     (item) =>
       item.id.toLowerCase().includes(search.toLowerCase()) ||
       item.product.toLowerCase().includes(search.toLowerCase()) ||
@@ -106,7 +169,7 @@ export default function BomPage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {bomKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -132,7 +195,7 @@ export default function BomPage() {
             <Download className="w-3.5 h-3.5" />
             Export
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button onClick={() => setModal("create")} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
             <Plus className="w-3.5 h-3.5" />
             New BOM
           </button>
@@ -145,7 +208,7 @@ export default function BomPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/20">
-                {["BOM ID", "Product & Grade", "Version", "Materials Count", "Cost per Bag", "Last Updated", "Created By", "Status"].map((h) => (
+                {["BOM ID", "Product & Grade", "Version", "Materials Count", "Cost per Bag", "Last Updated", "Created By", "Status", "Manage"].map((h) => (
                   <th
                     key={h}
                     className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-left whitespace-nowrap"
@@ -182,6 +245,20 @@ export default function BomPage() {
                       {item.status}
                     </Badge>
                   </td>
+                  <td className="px-5 py-3.5">
+                    {item.dbId !== undefined ? (
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => setModal(item)} className="p-1 text-muted hover:text-primary transition-colors" title="Edit">
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => removeRow(item)} className="p-1 text-muted hover:text-danger transition-colors" title="Delete">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted/40">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
@@ -195,6 +272,25 @@ export default function BomPage() {
           </table>
         </div>
       </div>
+
+      {modal && (
+        <RecordModal
+          title={modal === "create" ? "New BOM" : `Edit ${modal.id}`}
+          fields={BOM_FIELDS}
+          initial={
+            modal === "create"
+              ? {}
+              : {
+                  product: modal.product, grade: modal.grade, materials: String(modal.materials),
+                  costPerUnit: String(modal.costPerUnit), version: modal.version,
+                  createdBy: modal.createdBy, lastUpdated: modal.isoUpdated ?? "", status: modal.status,
+                }
+          }
+          submitLabel={modal === "create" ? "Create BOM" : "Save Changes"}
+          onSubmit={saveBom}
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
   );
 }

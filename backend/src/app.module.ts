@@ -6,6 +6,9 @@ import { entitySchemas } from './resources/entity.factory';
 import { ResourcesModule } from './resources/resources.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { WagesModule } from './wages/wages.module';
+import { ManufacturingModule } from './manufacturing/manufacturing.module';
+import { SettingsModule } from './settings/settings.module';
+import { AppUserEntity } from './settings/user.entity';
 
 @Module({
   imports: [
@@ -16,13 +19,15 @@ import { WagesModule } from './wages/wages.module';
         type: 'postgres',
         url: config.get<string>('DATABASE_URL'),
         ssl: { rejectUnauthorized: false },
-        entities: entitySchemas,
+        entities: [...entitySchemas, AppUserEntity],
         synchronize: true,
       }),
     }),
 
     DashboardModule,
     WagesModule,
+    ManufacturingModule,
+    SettingsModule,
     ResourcesModule,
   ],
 })

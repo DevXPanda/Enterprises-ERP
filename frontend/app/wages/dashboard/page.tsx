@@ -36,6 +36,16 @@ import {
   pendingWageApprovals,
   type WagesKpi,
 } from "@/data/wages-data";
+import { useApi } from "@/hooks/use-api";
+
+interface WagesDashboardData {
+  kpis: WagesKpi[];
+  wageCostTrend: typeof wageCostTrend;
+  deptAttendance: typeof deptAttendance;
+  shiftCostBreakdown: typeof shiftCostBreakdown;
+  recentPayouts: typeof recentPayouts;
+  pendingWageApprovals: typeof pendingWageApprovals;
+}
 
 const iconMap: Record<string, React.ReactNode> = {
   Users: <Users className="w-4 h-4" />,
@@ -105,6 +115,14 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export default function WagesDashboardPage() {
+  const live = useApi<WagesDashboardData>("/wages/dashboard");
+  const kpis = live?.kpis ?? wagesDashboardKpis;
+  const costTrend = live?.wageCostTrend ?? wageCostTrend;
+  const deptAtt = live?.deptAttendance ?? deptAttendance;
+  const shiftCosts = live?.shiftCostBreakdown ?? shiftCostBreakdown;
+  const payouts = live?.recentPayouts ?? recentPayouts;
+  const approvals = live?.pendingWageApprovals ?? pendingWageApprovals;
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -118,7 +136,7 @@ export default function WagesDashboardPage() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {wagesDashboardKpis.map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <KpiCard key={kpi.id} data={kpi} index={i} />
         ))}
       </div>
@@ -129,7 +147,7 @@ export default function WagesDashboardPage() {
         <ChartCard title="Daily Wage Cost Trend" subtitle="Daily labor cost variance (₹ Thousands)">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={wageCostTrend}>
+              <AreaChart data={costTrend}>
                 <defs>
                   <linearGradient id="wageGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3} />
@@ -151,7 +169,7 @@ export default function WagesDashboardPage() {
         <ChartCard title="Attendance by Department" subtitle="Active headcount presence vs total roster">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptAttendance} barGap={4}>
+              <BarChart data={deptAtt} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a5f20" />
                 <XAxis dataKey="department" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -170,7 +188,7 @@ export default function WagesDashboardPage() {
             <p className="text-xs text-muted mt-0.5">Shift cost distribution</p>
           </div>
           <div className="space-y-3.5 my-3">
-            {shiftCostBreakdown.map((item, idx) => (
+            {shiftCosts.map((item, idx) => (
               <div key={idx} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted truncate">{item.shift}</span>
@@ -193,7 +211,7 @@ export default function WagesDashboardPage() {
               <Zap className="w-3 h-3 text-warning" /> Shift B Currently Active
             </span>
             <span className="text-xs font-bold text-white">
-              Total: ₹{(shiftCostBreakdown.reduce((acc, curr) => acc + curr.cost, 0)).toLocaleString()}
+              Total: ₹{(shiftCosts.reduce((acc, curr) => acc + curr.cost, 0)).toLocaleString()}
             </span>
           </div>
         </div>
@@ -217,7 +235,7 @@ export default function WagesDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentPayouts.map((row) => (
+                {payouts.map((row) => (
                   <tr key={row.id} className="border-t border-border/10 hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-2.5">
                       <p className="text-xs font-medium text-white">{row.workerName}</p>
@@ -243,7 +261,7 @@ export default function WagesDashboardPage() {
               <h3 className="text-sm font-semibold text-white">Timesheet Approvals</h3>
               <p className="text-xs text-muted mt-0.5">Pending supervisor verification</p>
             </div>
-            <Badge variant="warning">{pendingWageApprovals.length} pending</Badge>
+            <Badge variant="warning">{approvals.length} pending</Badge>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -255,7 +273,7 @@ export default function WagesDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {pendingWageApprovals.map((row) => (
+                {approvals.map((row) => (
                   <tr key={row.id} className="border-t border-border/10 hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-2.5">
                       <p className="text-xs font-medium text-white">{row.workerName}</p>
