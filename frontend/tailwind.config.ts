@@ -21,9 +21,9 @@ const config: Config = {
         sidebar: "rgb(var(--bg-sidebar-rgb) / <alpha-value>)",
         card: "rgb(var(--bg-card-rgb) / <alpha-value>)",
         primary: {
-          DEFAULT: "#2563EB",
-          light: "#3b82f6",
-          dark: "#1d4ed8",
+          DEFAULT: "#2F6FED",        /* Refined enterprise blue */
+          light: "#5D91F3",
+          dark: "#245DD8",         /* Refined hover state */
         },
         success: {
           DEFAULT: "#22C55E",
@@ -53,7 +53,7 @@ const config: Config = {
         sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
       },
       boxShadow: {
-        card: "none",
+        card: "0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05)",
         glow: "none",
         "glow-green": "none",
         "glow-warning": "none",

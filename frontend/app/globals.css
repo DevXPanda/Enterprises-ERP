@@ -5,39 +5,46 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @layer base {
+  /* Dynamic enterprise-grade calm light theme tokens (Default) */
   :root {
-    --bg-navy-rgb: 7 23 38;
-    --bg-navy-50: #0a2540;
-    --bg-navy-100: #081B2F;
-    --bg-navy-200: #0D2238;
-    --bg-navy-300: #112d4e;
-    --bg-navy-400: #163a64;
-    --bg-navy-500: #1b477a;
-    --bg-sidebar-rgb: 8 27 47;
-    --bg-card-rgb: 13 34 56;
-    --color-primary: #2563EB;
+    --bg-navy-rgb: 248 250 252;          /* Background #F8FAFC */
+    --bg-navy-50: #f8fafc;               /* Background #F8FAFC */
+    --bg-navy-100: #f1f5f9;              /* Secondary Surface #F1F5F9 */
+    --bg-navy-200: #ffffff;              /* Surface #FFFFFF */
+    --bg-navy-300: #e2e8f0;              /* Border #E2E8F0 */
+    --bg-navy-400: #cbd5e1;              /* Secondary Border #CBD5E1 */
+    --bg-navy-500: #94a3b8;              /* Muted Border #94A3B8 */
+    --bg-sidebar-rgb: 255 255 255;       /* Sidebar -> White Surface */
+    --bg-card-rgb: 255 255 255;          /* Card -> White Surface */
+    --color-primary: #2F6FED;            /* Primary Softer Blue #2F6FED */
+    --color-success: #22C55E;            /* Success #22C55E */
+    --color-warning: #F59E0B;            /* Warning #F59E0B */
+    --color-purple: #8B5CF6;
+    --color-danger: #EF4444;             /* Danger #EF4444 */
+    --color-muted-rgb: 100 116 139;      /* Muted text #64748B */
+    --color-border-rgb: 226 232 240;     /* Border #E2E8F0 */
+    --text-white-rgb: 15 23 42;          /* Heading text #0F172A */
+  }
+
+  /* Refined, soft Dark Theme variables for toggle compatibility */
+  [data-theme="dark"] {
+    --bg-navy-rgb: 10 17 28;             /* Dark Slate Background */
+    --bg-navy-50: #0f1c2e;
+    --bg-navy-100: #14243a;
+    --bg-navy-200: #182b45;
+    --bg-navy-300: #203859;
+    --bg-navy-400: #2a4973;
+    --bg-navy-500: #386096;
+    --bg-sidebar-rgb: 12 21 34;
+    --bg-card-rgb: 15 27 44;
+    --color-primary: #2F6FED;
     --color-success: #22C55E;
     --color-warning: #F59E0B;
     --color-purple: #8B5CF6;
     --color-danger: #EF4444;
     --color-muted-rgb: 148 163 184;
     --color-border-rgb: 30 58 95;
-    --text-white-rgb: 255 255 255;
-  }
-
-  [data-theme="light"] {
-    --bg-navy-rgb: 248 250 252;
-    --bg-navy-50: #f1f5f9;
-    --bg-navy-100: #cbd5e1;
-    --bg-navy-200: #ffffff;
-    --bg-navy-300: #94a3b8;
-    --bg-navy-400: #64748b;
-    --bg-navy-500: #475569;
-    --bg-sidebar-rgb: 255 255 255;
-    --bg-card-rgb: 255 255 255;
-    --color-muted-rgb: 100 116 139;
-    --color-border-rgb: 226 232 240;
-    --text-white-rgb: 15 23 42;
+    --text-white-rgb: 248 250 252;
   }
 
   * {
@@ -51,7 +58,7 @@
     overflow-x: hidden;
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar matching soft enterprise theme */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -62,18 +69,23 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-navy-300 rounded-full;
+    background-color: var(--bg-navy-400) !important;
+    border-radius: 9999px !important;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-navy-400;
+    background-color: var(--bg-navy-500) !important;
   }
 }
 
 @layer components {
-  /* Glass card effect */
+  /* Glass card effect (Transform to clean, softly-shadowed white cards) */
   .glass-card {
-    @apply bg-card/80 backdrop-blur-md border border-border/50 rounded-2xl;
+    background-color: var(--bg-navy-200) !important;
+    border: 1px solid rgb(var(--color-border-rgb) / 0.5) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05) !important;
+    backdrop-filter: none !important;
   }
 
   .glass-card-hover {
@@ -81,10 +93,11 @@
   }
 
   .glass-card-hover:hover {
-    @apply border-border;
+    border-color: rgb(var(--color-border-rgb)) !important;
+    box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.08) !important;
   }
 
-  /* Sidebar styles */
+  /* Sidebar styles (light grey secondary surface background) */
   .sidebar-item {
     @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
            text-muted transition-all duration-300 ease-in-out cursor-pointer
@@ -92,7 +105,8 @@
   }
 
   .sidebar-item:hover {
-    @apply bg-white/5 text-white;
+    background-color: var(--bg-navy-100) !important;
+    color: rgb(var(--text-white-rgb)) !important;
   }
 
   .sidebar-item.active {
@@ -106,7 +120,8 @@
   }
 
   .sidebar-item-child:hover {
-    @apply text-white bg-white/5;
+    background-color: var(--bg-navy-100) !important;
+    color: rgb(var(--text-white-rgb)) !important;
   }
 
   .sidebar-item-child.active {
@@ -134,25 +149,40 @@
     @apply bg-danger/10 text-danger;
   }
 
-  /* Badge variants */
+  /* Status Badges - Refined with soft enterprise pastel backgrounds & dark text */
   .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider;
+    border-width: 1px !important;
   }
 
   .badge-success {
-    @apply badge bg-success/15 text-success-light;
+    background-color: rgba(34, 197, 94, 0.12) !important;
+    color: #15803d !important; 
+    border-color: rgba(34, 197, 94, 0.2) !important;
   }
 
   .badge-warning {
-    @apply badge bg-warning/15 text-warning-light;
+    background-color: rgba(245, 158, 11, 0.12) !important;
+    color: #b45309 !important; 
+    border-color: rgba(245, 158, 11, 0.2) !important;
   }
 
   .badge-danger {
-    @apply badge bg-danger/15 text-danger-light;
+    background-color: rgba(239, 68, 68, 0.12) !important;
+    color: #b91c1c !important; 
+    border-color: rgba(239, 68, 68, 0.2) !important;
   }
 
   .badge-info {
-    @apply badge bg-primary/15 text-primary-light;
+    background-color: rgba(47, 111, 237, 0.12) !important;
+    color: #1d4ed8 !important; 
+    border-color: rgba(47, 111, 237, 0.2) !important;
+  }
+
+  .badge-default {
+    background-color: rgba(100, 116, 139, 0.12) !important;
+    color: #475569 !important;
+    border-color: rgba(100, 116, 139, 0.2) !important;
   }
 
   /* Tooltip */
@@ -183,4 +213,150 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* ============================================================================
+   GLOBAL TABLE STYLING REFINEMENTS
+   ============================================================================ */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead tr {
+  background-color: var(--bg-navy-100) !important; /* Soft header background */
+  border-bottom: 1px solid rgb(var(--color-border-rgb)) !important;
+}
+
+th {
+  color: rgb(var(--color-muted-rgb)) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 12px 20px !important;
+  border-bottom: 1px solid rgb(var(--color-border-rgb)) !important;
+}
+
+tbody tr {
+  border-bottom: 1px solid rgb(var(--color-border-rgb) / 0.6) !important;
+  transition: background-color 0.2s ease !important;
+}
+
+tbody tr:hover {
+  background-color: var(--bg-navy-50) !important; /* Soft row hover */
+}
+
+td {
+  color: rgb(var(--color-muted-rgb) / 0.9) !important;
+  font-size: 13px !important;
+  padding: 14px 20px !important;
+}
+
+/* Ensure links or highlighted IDs in tables look calm and premium */
+td a, td .text-primary {
+  color: var(--color-primary) !important;
+  font-weight: 500;
+}
+
+/* ============================================================================
+   GLOBAL INPUT STYLING OVERRIDES (Search, Input, Textarea, Select)
+   ============================================================================ */
+
+input[type="text"], 
+input[type="number"], 
+input[type="date"], 
+select, 
+textarea {
+  background-color: var(--bg-navy-200) !important;
+  border: 1px solid rgb(var(--color-border-rgb)) !important;
+  color: rgb(var(--text-white-rgb)) !important;
+  border-radius: 12px !important; /* 12px radius */
+  height: 48px !important; /* consistent height */
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  transition: all 0.2s ease !important;
+}
+
+textarea {
+  height: auto !important;
+  min-height: 100px !important;
+}
+
+input::placeholder {
+  color: rgb(var(--color-muted-rgb) / 0.5) !important;
+}
+
+input:focus, 
+select:focus, 
+textarea:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15) !important;
+  outline: none !important;
+}
+
+input:disabled, 
+select:disabled, 
+textarea:disabled {
+  background-color: var(--bg-navy-50) !important;
+  color: rgb(var(--color-muted-rgb)) !important;
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+/* ============================================================================
+   GLOBAL BUTTONS SPECIFIC STYLE CALMING
+   ============================================================================ */
+
+button, .btn {
+  font-family: 'Inter', sans-serif !important;
+  border-radius: 12px !important; /* 12px border radius */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Force pure white text on primary/danger buttons in Light Theme */
+button.bg-primary, 
+button.bg-danger, 
+a.bg-primary, 
+a.bg-danger, 
+.bg-primary, 
+.bg-danger {
+  color: #ffffff !important;
+}
+
+button.bg-primary {
+  background-color: #2F6FED !important; /* Softer enterprise blue */
+  box-shadow: 0 2px 4px 0 rgba(47, 111, 237, 0.15) !important;
+}
+
+button.bg-primary:hover {
+  background-color: #245DD8 !important; /* Primary hover */
+  box-shadow: 0 4px 6px 0 rgba(47, 111, 237, 0.25) !important;
+}
+
+button.bg-danger {
+  background-color: #EF4444 !important;
+  box-shadow: 0 2px 4px 0 rgba(239, 68, 68, 0.15) !important;
+}
+
+button.bg-danger:hover {
+  background-color: #dc2626 !important;
+  box-shadow: 0 4px 6px 0 rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Outline button styling details */
+button.border-border, 
+button.border-border\/40 {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #475569 !important;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05) !important;
+}
+
+button.border-border:hover, 
+button.border-border\/40:hover {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
 }

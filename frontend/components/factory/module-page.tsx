@@ -14,11 +14,13 @@ import {
   Search,
   Download,
   Plus,
-  Pencil,
   Trash2,
   X,
   RefreshCw,
   AlertTriangle,
+  Eye,
+  Edit,
+  ClipboardList,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +32,16 @@ import {
   type ApiColumn,
   type ListResponse,
 } from "@/lib/api";
+import { 
+  FormDialog, 
+  FormHeader, 
+  FormSection, 
+  FormGrid, 
+  FormField, 
+  FormFooter, 
+  ActionButtons, 
+  EmptyTableState 
+} from "@/components/ui/enterprise-form";
 
 export interface ModuleColumn {
   key: string;
@@ -92,9 +104,12 @@ export function ModulePage({
   const [error, setError] = useState<string | null>(null);
   const [paginated, setPaginated] = useState(true);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Row | null>(null);
-  const [form, setForm] = useState<Record<string, string>>({});
+  // Form Modal States
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
+  const [activeRow, setActiveRow] = useState<Row | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -150,42 +165,113 @@ export function ModulePage({
     );
   }, [rows, columns, debounced, paginated]);
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm({});
+  // Open FormDialog in "Create" mode
+  const handleAddClick = () => {
+    setActiveRow(null);
+    const initial: Record<string, string> = {};
+    for (const col of columns) {
+      initial[col.key] = "";
+    }
+    setFormValues(initial);
+    setValidationErrors({});
     setModalError(null);
-    setModalOpen(true);
+    setDialogMode("create");
+    setIsDialogOpen(true);
   };
 
-  const openEdit = (row: Row) => {
-    setEditing(row);
+  // Open FormDialog in "Edit" mode
+  const handleEditClick = (row: Row) => {
+    setActiveRow(row);
     const initial: Record<string, string> = {};
     for (const col of columns) {
       const v = row[col.key];
       initial[col.key] = v === null || v === undefined ? "" : String(v);
     }
-    setForm(initial);
+    setFormValues(initial);
+    setValidationErrors({});
     setModalError(null);
-    setModalOpen(true);
+    setDialogMode("edit");
+    setIsDialogOpen(true);
   };
 
-  const submit = async () => {
+  // Open FormDialog in "View" mode
+  const handleViewClick = (row: Row) => {
+    setActiveRow(row);
+    const initial: Record<string, string> = {};
+    for (const col of columns) {
+      const v = row[col.key];
+      initial[col.key] = v === null || v === undefined ? "" : String(v);
+    }
+    setFormValues(initial);
+    setValidationErrors({});
+    setModalError(null);
+    setDialogMode("view");
+    setIsDialogOpen(true);
+  };
+
+  // Handle Input Changes
+  const handleInputChange = (key: string, value: any) => {
+    setFormValues((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    if (validationErrors[key]) {
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  // Handle Form Submission with Validation & NestJS CRUD
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (dialogMode === "view") {
+      setIsDialogOpen(false);
+      return;
+    }
+
+    // Dynamic field validation
+    const errors: Record<string, string> = {};
+    columns.forEach((col) => {
+      const isRequired = 
+        col.label.toLowerCase().includes("name") || 
+        col.label.toLowerCase().includes("product") || 
+        col.label.toLowerCase().includes("customer") || 
+        col.label.toLowerCase().includes("operator") || 
+        col.label.toLowerCase().includes("department") || 
+        col.label.toLowerCase().includes("type") ||
+        col.label.toLowerCase().includes("qty") ||
+        col.label.toLowerCase().includes("quantity");
+
+      if (isRequired && !formValues[col.key]) {
+        errors[col.key] = `${col.label} is required.`;
+      }
+    });
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
     setSaving(true);
     setModalError(null);
     try {
       const payload: Record<string, unknown> = {};
       for (const col of columns) {
-        const raw = form[col.key];
+        const raw = formValues[col.key];
         if (raw === undefined || raw === "") continue;
         const t = colType.get(col.key);
         payload[col.key] = t === "int" || t === "num" ? Number(raw) : raw;
       }
-      if (editing) {
-        await apiSend("PATCH", `${apiPath}/${editing.id}`, payload);
+
+      if (dialogMode === "edit" && activeRow) {
+        await apiSend("PATCH", `${apiPath}/${activeRow.id}`, payload);
       } else {
         await apiSend("POST", apiPath, payload);
       }
-      setModalOpen(false);
+      setIsDialogOpen(false);
       await load();
     } catch (err) {
       setModalError(err instanceof Error ? err.message : "Save failed");
@@ -194,7 +280,8 @@ export function ModulePage({
     }
   };
 
-  const remove = async (row: Row) => {
+  // Delete Action
+  const handleDelete = async (row: Row) => {
     if (!window.confirm(`Delete this ${title.replace(/s$/, "").toLowerCase()} record?`)) return;
     try {
       await apiSend("DELETE", `${apiPath}/${row.id}`);
@@ -204,6 +291,7 @@ export function ModulePage({
     }
   };
 
+  // CSV Export Action
   const exportCsv = () => {
     const header = columns.map((c) => c.label).join(",");
     const lines = visibleRows.map((row) =>
@@ -220,6 +308,33 @@ export function ModulePage({
     a.download = `${title.toLowerCase().replace(/\s+/g, "-")}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
+  };
+
+  // Option lists helper for select fields
+  const getSelectOptions = (key: string) => {
+    const k = key.toLowerCase();
+    if (k.includes("status") || k === "qrcheck") {
+      if (title.toLowerCase().includes("gate") || title.toLowerCase().includes("exit") || title.toLowerCase().includes("entry")) {
+        return ["In", "Out", "Scan Pending"];
+      }
+      return ["Active", "Pending", "Approved", "Completed", "In Progress", "Verified"];
+    }
+    if (k.includes("shift")) {
+      return ["Shift A", "Shift B", "Shift C"];
+    }
+    if (k.includes("dept") || k.includes("department")) {
+      return ["Production", "Packing", "Quality Control", "Maintenance", "Store", "Dispatch"];
+    }
+    if (k.includes("grade")) {
+      return ["53 Grade", "43 Grade", "PSC", "PPC", "Premium"];
+    }
+    if (k.includes("type")) {
+      return ["Contractor", "Permanent", "Regular", "Temporary"];
+    }
+    if (k.includes("priority")) {
+      return ["High", "Medium", "Low"];
+    }
+    return [];
   };
 
   return (
@@ -259,9 +374,9 @@ export function ModulePage({
           </button>
           {!readOnly && (
             <button
+              onClick={handleAddClick}
               type="button"
-              onClick={openCreate}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10"
             >
               <Plus className="w-3.5 h-3.5" />
               {addNewLabel}
@@ -283,213 +398,290 @@ export function ModulePage({
         </div>
       )}
 
-      {/* Table */}
-      <div className="glass-card overflow-hidden animate-fade-in">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/20">
-                {columns.map((col) => (
-                  <th
-                    key={col.key}
-                    className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-left whitespace-nowrap"
-                  >
-                    {col.label}
-                  </th>
-                ))}
-                {!readOnly && (
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-right whitespace-nowrap">
-                    Actions
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {loading
-                ? SKELETON_WIDTHS.map((width, rowIdx) => (
-                    <tr key={`s-${rowIdx}`} className="border-t border-border/10">
-                      {columns.map((col, colIdx) => (
-                        <td key={col.key} className="px-5 py-3.5">
-                          <div
-                            className="h-3 bg-white/[0.06] rounded-full animate-pulse"
-                            style={{
-                              width:
-                                colIdx === 0
-                                  ? "75%"
-                                  : colIdx === columns.length - 1
-                                  ? "45%"
-                                  : width,
-                              animationDelay: `${rowIdx * 60}ms`,
-                            }}
-                          />
-                        </td>
-                      ))}
-                      {!readOnly && <td className="px-5 py-3.5" />}
-                    </tr>
-                  ))
-                : visibleRows.map((row, rowIdx) => (
-                    <tr
-                      key={String(row.id ?? rowIdx)}
-                      className="border-t border-border/10 hover:bg-white/[0.02] transition-colors"
+      {/* Main Table Area */}
+      {!loading && !error && rows.length === 0 ? (
+        <EmptyTableState
+          title={`No ${title.toLowerCase()} records found`}
+          description={`Get started by adding your first record to the database. Every record will be verified automatically.`}
+          actionLabel={addNewLabel}
+          onAction={handleAddClick}
+        />
+      ) : !loading && !error && visibleRows.length === 0 ? (
+        <EmptyTableState
+          title="No search results found"
+          description={`Your query "${search}" did not match any fields in the ${title.toLowerCase()} registry.`}
+          actionLabel="Clear Filter"
+          onAction={() => setSearch("")}
+        />
+      ) : (
+        <div className="glass-card overflow-hidden animate-fade-in">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/20 bg-navy-900/10">
+                  {columns.map((col) => (
+                    <th
+                      key={col.key}
+                      className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-left whitespace-nowrap"
                     >
-                      {columns.map((col, colIdx) => {
-                        const display = formatCell(row[col.key], colType.get(col.key));
-                        const isStatusCol =
-                          col.key.toLowerCase().includes("status") ||
-                          col.key === "result" ||
-                          col.key === "rating" ||
-                          col.key === "attendance" ||
-                          col.key === "priority";
-                        const variant =
-                          isStatusCol && display !== "—" ? statusVariant(display) : null;
-                        return (
-                          <td key={col.key} className="px-5 py-3.5 text-xs whitespace-nowrap">
-                            {variant ? (
-                              <Badge variant={variant} dot>
-                                {display}
-                              </Badge>
-                            ) : (
-                              <span className={colIdx === 0 ? "font-semibold text-white" : "text-white/85"}>
-                                {display}
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                      {!readOnly && (
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => openEdit(row)}
-                              className="p-1 text-muted hover:text-primary transition-colors"
-                              title="Edit row"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => remove(row)}
-                              className="p-1 text-muted hover:text-danger transition-colors"
-                              title="Delete row"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-              {!loading && !error && visibleRows.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={columns.length + (readOnly ? 0 : 1)}
-                    className="px-5 py-8 text-center text-xs text-muted"
-                  >
-                    No {title.toLowerCase()} records
-                    {debounced ? ` matching “${debounced}”` : " yet"}.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer: count + pagination */}
-        {!error && (visibleRows.length > 0 || loading) && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-border/10 text-xs text-muted">
-            <span>{loading ? "Loading…" : `${total} record${total === 1 ? "" : "s"}`}</span>
-            {paginated && totalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1 || loading}
-                  className="px-2.5 py-1 rounded-lg border border-border/40 hover:bg-white/5 disabled:opacity-40 transition-all"
-                >
-                  Prev
-                </button>
-                <span>
-                  Page {page} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages || loading}
-                  className="px-2.5 py-1 rounded-lg border border-border/40 hover:bg-white/5 disabled:opacity-40 transition-all"
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Create / Edit modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fade-in">
-          <div className="glass-card w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white">
-                {editing ? `Edit ${title}` : addNewLabel}
-              </h2>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg text-muted hover:text-white hover:bg-white/5"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {columns.map((col) => {
-                const t = colType.get(col.key);
-                return (
-                  <label key={col.key} className="space-y-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted/70">
                       {col.label}
-                    </span>
-                    <input
-                      type={
-                        t === "int" || t === "num"
-                          ? "number"
-                          : t === "date"
-                          ? "date"
-                          : t === "ts"
-                          ? "datetime-local"
-                          : "text"
-                      }
-                      value={form[col.key] ?? ""}
-                      onChange={(e) => setForm((f) => ({ ...f, [col.key]: e.target.value }))}
-                      className="w-full px-3 py-2 bg-card/60 border border-border/40 rounded-xl text-sm text-white outline-none focus:border-primary/50 transition-all"
-                    />
-                  </label>
-                );
-              })}
-            </div>
-
-            {modalError && (
-              <p className="text-xs text-danger flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5" /> {modalError}
-              </p>
-            )}
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 hover:bg-white/5 hover:text-white transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submit}
-                disabled={saving}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all disabled:opacity-50"
-              >
-                {saving ? "Saving…" : editing ? "Save Changes" : "Create"}
-              </button>
-            </div>
+                    </th>
+                  ))}
+                  {!readOnly && (
+                    <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-right whitespace-nowrap">
+                      Actions
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {loading
+                  ? SKELETON_WIDTHS.map((width, rowIdx) => (
+                      <tr key={`s-${rowIdx}`} className="border-t border-border/10">
+                        {columns.map((col, colIdx) => (
+                          <td key={col.key} className="px-5 py-3.5">
+                            <div
+                              className="h-3 bg-white/[0.06] rounded-full animate-pulse"
+                              style={{
+                                width:
+                                  colIdx === 0
+                                    ? "75%"
+                                    : colIdx === columns.length - 1
+                                    ? "45%"
+                                    : width,
+                                animationDelay: `${rowIdx * 60}ms`,
+                              }}
+                            />
+                          </td>
+                        ))}
+                        {!readOnly && <td className="px-5 py-3.5" />}
+                      </tr>
+                    ))
+                  : visibleRows.map((row, rowIdx) => (
+                      <tr
+                        key={String(row.id ?? rowIdx)}
+                        className="border-t border-border/10 hover:bg-white/[0.02] transition-colors"
+                      >
+                        {columns.map((col, colIdx) => {
+                          const display = formatCell(row[col.key], colType.get(col.key));
+                          const isStatusCol =
+                            col.key.toLowerCase().includes("status") ||
+                            col.key === "result" ||
+                            col.key === "rating" ||
+                            col.key === "attendance" ||
+                            col.key === "priority";
+                          const variant =
+                            isStatusCol && display !== "—" ? statusVariant(display) : null;
+                          return (
+                            <td key={col.key} className="px-5 py-3.5 text-xs whitespace-nowrap">
+                              {variant ? (
+                                <Badge variant={variant} dot>
+                                  {display}
+                                </Badge>
+                              ) : (
+                                <span className={colIdx === 0 ? "font-semibold text-white" : "text-white/85"}>
+                                  {display}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        {!readOnly && (
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button 
+                                onClick={() => handleViewClick(row)}
+                                className="p-1.5 text-muted hover:text-white rounded-lg hover:bg-white/5 transition-all" 
+                                title="View details"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => handleEditClick(row)}
+                                className="p-1.5 text-muted hover:text-primary rounded-lg hover:bg-white/5 transition-all" 
+                                title="Edit row"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(row)}
+                                className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-white/5 transition-all"
+                                title="Delete row"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+              </tbody>
+            </table>
           </div>
+
+          {/* Footer: count + pagination */}
+          {!error && (visibleRows.length > 0 || loading) && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-border/10 text-xs text-muted">
+              <span>{loading ? "Loading…" : `${total} record${total === 1 ? "" : "s"}`}</span>
+              {paginated && totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || loading}
+                    className="px-2.5 py-1 rounded-lg border border-border/40 hover:bg-white/5 disabled:opacity-40 transition-all"
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages || loading}
+                    className="px-2.5 py-1 rounded-lg border border-border/40 hover:bg-white/5 disabled:opacity-40 transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Reusable Enterprise Dialog */}
+      <FormDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} size="2xl">
+        <FormHeader
+          title={
+            dialogMode === "create"
+              ? `${addNewLabel}`
+              : dialogMode === "edit"
+              ? `Edit ${title}`
+              : `${title} Details`
+          }
+          description={
+            dialogMode === "create"
+              ? `Create a new entry in the ${title.toLowerCase()} registry.`
+              : dialogMode === "edit"
+              ? `Update existing details for this ${title.toLowerCase()} entry.`
+              : `Viewing read-only record details for the current ${title.toLowerCase()} entry.`
+          }
+          icon={<ClipboardList className="w-6 h-6" />}
+          onClose={() => setIsDialogOpen(false)}
+        />
+
+        <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+          <FormSection title="General Information">
+            <FormGrid cols={2}>
+              {columns.map((col) => {
+                const key = col.key;
+                const label = col.label;
+                const isRequired = 
+                  label.toLowerCase().includes("name") || 
+                  label.toLowerCase().includes("product") || 
+                  label.toLowerCase().includes("customer") || 
+                  label.toLowerCase().includes("operator") || 
+                  label.toLowerCase().includes("department") || 
+                  label.toLowerCase().includes("type") ||
+                  label.toLowerCase().includes("qty") ||
+                  label.toLowerCase().includes("quantity");
+
+                const value = formValues[key] || "";
+                const selectOptions = getSelectOptions(key);
+                const isCodeField = key.toLowerCase().includes("id") || 
+                                     key.toLowerCase().includes("no") || 
+                                     key.toLowerCase() === "code";
+                
+                // Helper text resolver
+                let fieldHelp = `Enter the ${label.toLowerCase()} parameter.`;
+                if (key.toLowerCase().includes("date")) {
+                  fieldHelp = "Select the scheduling calendar date.";
+                } else if (selectOptions.length > 0) {
+                  fieldHelp = `Select the configured ${label.toLowerCase()} option.`;
+                }
+
+                return (
+                  <FormField
+                    key={key}
+                    label={label}
+                    fieldName={key}
+                    required={isRequired && dialogMode !== "view"}
+                    error={validationErrors[key]}
+                    success={value && !validationErrors[key] && dialogMode !== "view"}
+                    helpText={dialogMode === "view" ? undefined : fieldHelp}
+                  >
+                    {dialogMode === "view" ? (
+                      <input
+                        type="text"
+                        value={value}
+                        readOnly
+                        disabled
+                      />
+                    ) : selectOptions.length > 0 ? (
+                      <select
+                        value={value}
+                        onChange={(e) => handleInputChange(key, e.target.value)}
+                        disabled={isCodeField && dialogMode === "edit"}
+                      >
+                        <option value="">Select Option...</option>
+                        {selectOptions.map((opt) => (
+                          <option key={opt} value={opt} className="bg-navy-100">
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : key.toLowerCase().includes("date") ? (
+                      <input
+                        type="date"
+                        value={value}
+                        onChange={(e) => handleInputChange(key, e.target.value)}
+                        disabled={isCodeField && dialogMode === "edit"}
+                      />
+                    ) : key.toLowerCase().includes("qty") || key.toLowerCase().includes("quantity") || key.toLowerCase().includes("strength") || key.toLowerCase().includes("rate") || key.toLowerCase().includes("wage") || key.toLowerCase().includes("pay") || key.toLowerCase().includes("amount") ? (
+                      <input
+                        type="number"
+                        value={value}
+                        onChange={(e) => handleInputChange(key, e.target.value)}
+                        disabled={isCodeField && dialogMode === "edit"}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => handleInputChange(key, e.target.value)}
+                        disabled={isCodeField && dialogMode === "edit"}
+                      />
+                    )}
+                  </FormField>
+                );
+              })}
+            </FormGrid>
+          </FormSection>
+
+          {modalError && (
+            <p className="text-xs text-danger flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" /> {modalError}
+            </p>
+          )}
+
+          {/* Hidden submit trigger for keyboard 'Enter' support */}
+          <button type="submit" className="hidden" />
+        </form>
+
+        <FormFooter>
+          <ActionButtons
+            onCancel={() => setIsDialogOpen(false)}
+            submitLabel={
+              dialogMode === "create"
+                ? "Create Entry"
+                : dialogMode === "edit"
+                ? "Save Changes"
+                : "Close"
+            }
+            onSubmit={handleFormSubmit}
+          />
+        </FormFooter>
+      </FormDialog>
     </div>
   );
 }

@@ -20,7 +20,6 @@ import {
   FileText,
   ArrowUpRight,
 } from "lucide-react";
-
 import { apiGet } from "@/lib/api";
 
 interface NavbarProps {
@@ -99,7 +98,7 @@ export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [profile, setProfile] = useState<NavProfile | null>(null);
   const [records, setRecords] = useState<SearchRecord[]>([]);
   const [searching, setSearching] = useState(false);
@@ -177,7 +176,7 @@ export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
       setTheme(savedTheme);
       document.documentElement.setAttribute("data-theme", savedTheme);
     } else {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       setTheme(systemTheme);
       document.documentElement.setAttribute("data-theme", systemTheme);
     }

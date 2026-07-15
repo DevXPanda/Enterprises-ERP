@@ -14,6 +14,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Eye,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -22,14 +25,22 @@ import { bomKpis, bomItems, type MfgKpi, type BomItem } from "@/data/manufacturi
 import { useApi } from "@/hooks/use-api";
 import { exportCsv } from "@/lib/export";
 import { apiSend } from "@/lib/api";
-import { RecordModal } from "@/components/ui/record-modal";
-import { Pencil, Trash2 } from "lucide-react";
-
-const fmtDate = (d?: unknown) =>
-  d ? new Date(String(d)).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+import { 
+  FormDialog, 
+  FormHeader, 
+  FormSection, 
+  FormGrid, 
+  FormField, 
+  FormFooter, 
+  ActionButtons, 
+  EmptyTableState 
+} from "@/components/ui/enterprise-form";
 
 // Custom GitBranch icon stand-in since we want to be safe with lucide icons
 import { GitCommit as GitBranch } from "lucide-react";
+
+const fmtDate = (d?: unknown) =>
+  d ? new Date(String(d)).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 const iconMap: Record<string, React.ReactNode> = {
   ScrollText: <ScrollText className="w-4 h-4" />,
@@ -87,45 +98,22 @@ function KpiCard({ data, index }: { data: MfgKpi; index: number }) {
 }
 
 type BomRow = BomItem & { dbId?: number; isoUpdated?: string };
-
-const BOM_FIELDS = [
-  { key: "product", label: "Product", required: true },
-  { key: "grade", label: "Grade" },
-  { key: "materials", label: "Materials Count", type: "number" as const },
-  { key: "costPerUnit", label: "Cost / Bag (₹)", type: "number" as const, required: true },
-  { key: "version", label: "Version" },
-  { key: "createdBy", label: "Created By" },
-  { key: "lastUpdated", label: "Last Updated", type: "date" as const },
-  { key: "status", label: "Status", type: "select" as const, options: ["active", "draft", "archived"] },
-];
 const BOM_NUM_KEYS = ["materials", "costPerUnit"];
 
 export default function BomPage() {
   const [search, setSearch] = useState("");
   const [version, setVersion] = useState(0);
-  const [modal, setModal] = useState<"create" | BomRow | null>(null);
+
+  // Live API hooks
   const kpiLive = useApi<{ kpis: MfgKpi[] }>("/manufacturing/bom/analytics", version);
   const listLive = useApi<{ data: Record<string, unknown>[] }>("/manufacturing/bom?pageSize=50", version);
 
-  const saveBom = async (values: Record<string, string>) => {
-    const payload: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(values)) {
-      if (v === "") continue;
-      payload[k] = BOM_NUM_KEYS.includes(k) ? Number(v) : v;
-    }
-    if (modal !== "create" && modal?.dbId !== undefined) {
-      await apiSend("PATCH", `/manufacturing/bom/${modal.dbId}`, payload);
-    } else {
-      await apiSend("POST", "/manufacturing/bom", payload);
-    }
-    setVersion((v) => v + 1);
-  };
-
-  const removeRow = async (row: BomRow) => {
-    if (row.dbId === undefined || !window.confirm(`Delete ${row.id}?`)) return;
-    await apiSend("DELETE", `/manufacturing/bom/${row.dbId}`);
-    setVersion((v) => v + 1);
-  };
+  // Dialog States
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | "view">("create");
+  const [activeRow, setActiveRow] = useState<BomRow | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const kpis = kpiLive?.kpis ?? bomKpis;
   const items: BomRow[] = listLive
@@ -155,6 +143,115 @@ export default function BomPage() {
     if (s === "active") return "success";
     if (s === "draft") return "warning";
     return "default";
+  };
+
+  // Open Dialog for New BOM
+  const handleAddClick = () => {
+    const newIdNum = items.length > 0 ? Math.max(...items.map(d => parseInt(d.id.split("-")[1] || "0"))) + 1 : 1;
+    const initialValues = {
+      product: "",
+      grade: "53 Grade",
+      version: "v1.0",
+      materials: "",
+      costPerUnit: "",
+      status: "draft",
+      createdBy: "Plant Manager",
+    };
+    setFormValues(initialValues);
+    setValidationErrors({});
+    setDialogMode("create");
+    setIsDialogOpen(true);
+  };
+
+  // Open Dialog for Edit
+  const handleEditClick = (row: BomRow) => {
+    setActiveRow(row);
+    setFormValues({
+      product: row.product,
+      grade: row.grade,
+      version: row.version,
+      materials: String(row.materials),
+      costPerUnit: String(row.costPerUnit),
+      status: row.status,
+      createdBy: row.createdBy,
+    });
+    setValidationErrors({});
+    setDialogMode("edit");
+    setIsDialogOpen(true);
+  };
+
+  // Open Dialog for View
+  const handleViewClick = (row: BomRow) => {
+    setActiveRow(row);
+    setFormValues({
+      product: row.product,
+      grade: row.grade,
+      version: row.version,
+      materials: String(row.materials),
+      costPerUnit: String(row.costPerUnit),
+      status: row.status,
+      createdBy: row.createdBy,
+    });
+    setValidationErrors({});
+    setDialogMode("view");
+    setIsDialogOpen(true);
+  };
+
+  // Delete handler
+  const handleDeleteClick = async (row: BomRow) => {
+    if (row.dbId === undefined || !window.confirm(`Delete BOM ${row.id}?`)) return;
+    await apiSend("DELETE", `/manufacturing/bom/${row.dbId}`);
+    setVersion((v) => v + 1);
+  };
+
+  // Input changes
+  const handleInputChange = (key: string, value: any) => {
+    setFormValues((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    if (validationErrors[key]) {
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  // Form submission handler
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (dialogMode === "view") {
+      setIsDialogOpen(false);
+      return;
+    }
+
+    // Validation check
+    const errors: Record<string, string> = {};
+    if (!formValues.product) errors.product = "Product Name is required.";
+    if (!formValues.materials || isNaN(Number(formValues.materials))) errors.materials = "Valid ingredients count is required.";
+    if (!formValues.costPerUnit || isNaN(Number(formValues.costPerUnit))) errors.costPerUnit = "Valid cost per bag is required.";
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    const payload: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(formValues)) {
+      if (v === "") continue;
+      payload[k] = BOM_NUM_KEYS.includes(k) ? Number(v) : v;
+    }
+
+    if (dialogMode === "edit" && activeRow?.dbId !== undefined) {
+      await apiSend("PATCH", `/manufacturing/bom/${activeRow.dbId}`, payload);
+    } else {
+      await apiSend("POST", "/manufacturing/bom", payload);
+    }
+
+    setVersion((v) => v + 1);
+    setIsDialogOpen(false);
   };
 
   return (
@@ -196,102 +293,278 @@ export default function BomPage() {
             <Download className="w-3.5 h-3.5" />
             Export
           </button>
-          <button onClick={() => setModal("create")} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button 
+            onClick={handleAddClick}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary/95 transition-all shadow-md shadow-primary/10"
+          >
             <Plus className="w-3.5 h-3.5" />
             New BOM
           </button>
         </div>
       </div>
 
-      {/* BOM Table */}
-      <div className="glass-card overflow-hidden animate-fade-in">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/20">
-                {["BOM ID", "Product & Grade", "Version", "Materials Count", "Cost per Bag", "Last Updated", "Created By", "Status", "Manage"].map((h) => (
-                  <th
-                    key={h}
-                    className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-left whitespace-nowrap"
+      {/* BOM Table Section */}
+      {items.length === 0 ? (
+        <EmptyTableState
+          title="No Bill of Materials found"
+          description="Get started by creating a new Bill of Materials recipe configuration."
+          actionLabel="New BOM"
+          onAction={handleAddClick}
+        />
+      ) : filtered.length === 0 ? (
+        <EmptyTableState
+          title="No search results found"
+          description={`Your query "${search}" did not match any fields in the BOM register.`}
+          actionLabel="Clear Filter"
+          onAction={() => setSearch("")}
+        />
+      ) : (
+        <div className="glass-card overflow-hidden animate-fade-in">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/20 bg-navy-900/10">
+                  {["BOM ID", "Product & Grade", "Version", "Materials Count", "Cost per Bag", "Last Updated", "Created By", "Status", "Actions"].map((h) => (
+                    <th
+                      key={h}
+                      className={cn(
+                        "px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted/70 text-left whitespace-nowrap",
+                        h === "Actions" ? "text-right" : ""
+                      )}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-t border-border/10 hover:bg-white/[0.02] transition-colors"
                   >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-t border-border/10 hover:bg-white/[0.02] transition-colors"
-                >
-                  <td className="px-5 py-3.5 text-xs font-medium text-primary">{item.id}</td>
-                  <td className="px-5 py-3.5">
-                    <p className="text-xs font-medium text-white">{item.product}</p>
-                    <p className="text-[10px] text-muted">{item.grade}</p>
-                  </td>
-                  <td className="px-5 py-3.5 text-xs text-white">
-                    <Badge variant="default" className="bg-navy-300/30 text-white border-none">
-                      {item.version}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-3.5 text-xs text-white">{item.materials} ingredients</td>
-                  <td className="px-5 py-3.5 text-xs font-semibold text-success">
-                    ₹{item.costPerUnit}
-                  </td>
-                  <td className="px-5 py-3.5 text-xs text-muted">{item.lastUpdated}</td>
-                  <td className="px-5 py-3.5 text-xs text-muted">{item.createdBy}</td>
-                  <td className="px-5 py-3.5">
-                    <Badge variant={statusVariant(item.status)} dot>
-                      {item.status}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    {item.dbId !== undefined ? (
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => setModal(item)} className="p-1 text-muted hover:text-primary transition-colors" title="Edit">
-                          <Pencil className="w-3.5 h-3.5" />
+                    <td className="px-5 py-3.5 text-xs font-medium text-primary">{item.id}</td>
+                    <td className="px-5 py-3.5">
+                      <p className="text-xs font-medium text-white">{item.product}</p>
+                      <p className="text-[10px] text-muted">{item.grade}</p>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-white">
+                      <Badge variant="default" className="bg-navy-300/30 text-white border-none">
+                        {item.version}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-white">{item.materials} ingredients</td>
+                    <td className="px-5 py-3.5 text-xs font-semibold text-success">
+                      ₹{item.costPerUnit}
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-muted">{item.lastUpdated}</td>
+                    <td className="px-5 py-3.5 text-xs text-muted">{item.createdBy}</td>
+                    <td className="px-5 py-3.5">
+                      <Badge variant={statusVariant(item.status)} dot>
+                        {item.status}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleViewClick(item)}
+                          className="p-1.5 text-muted hover:text-white rounded-lg hover:bg-white/5 transition-all"
+                          title="View Details"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => removeRow(item)} className="p-1 text-muted hover:text-danger transition-colors" title="Delete">
+                        <button
+                          onClick={() => handleEditClick(item)}
+                          className="p-1.5 text-muted hover:text-primary rounded-lg hover:bg-white/5 transition-all"
+                          title="Edit BOM"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(item)}
+                          disabled={item.dbId === undefined}
+                          className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Delete BOM"
+                        >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    ) : (
-                      <span className="text-[10px] text-muted/40">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-5 py-8 text-center text-xs text-muted">
-                    No Bill of Materials matches search query.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-
-      {modal && (
-        <RecordModal
-          title={modal === "create" ? "New BOM" : `Edit ${modal.id}`}
-          fields={BOM_FIELDS}
-          initial={
-            modal === "create"
-              ? {}
-              : {
-                  product: modal.product, grade: modal.grade, materials: String(modal.materials),
-                  costPerUnit: String(modal.costPerUnit), version: modal.version,
-                  createdBy: modal.createdBy, lastUpdated: modal.isoUpdated ?? "", status: modal.status,
-                }
-          }
-          submitLabel={modal === "create" ? "Create BOM" : "Save Changes"}
-          onSubmit={saveBom}
-          onClose={() => setModal(null)}
-        />
       )}
+
+      {/* Enterprise Dialog */}
+      <FormDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} size="2xl">
+        <FormHeader
+          title={
+            dialogMode === "create"
+              ? "New Bill of Materials"
+              : dialogMode === "edit"
+              ? `Edit BOM Recipe`
+              : `BOM Details`
+          }
+          description={
+            dialogMode === "create"
+              ? "Formulate raw material proportions and track version logs for cement grades."
+              : dialogMode === "edit"
+              ? "Modify constituent materials, cost parameters, and status indicators."
+              : "Review recipe details, author metadata, and active status configurations."
+          }
+          icon={<ScrollText className="w-6 h-6" />}
+          onClose={() => setIsDialogOpen(false)}
+        />
+
+        <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+          <FormSection title="Recipe Properties">
+            <FormGrid cols={2}>
+              <FormField
+                label="Product Name"
+                fieldName="product"
+                required
+                error={validationErrors.product}
+                success={formValues.product && !validationErrors.product && dialogMode !== "view"}
+                helpText="Example: OPC Cement, PPC Cement, or White Cement."
+              >
+                <input
+                  type="text"
+                  value={formValues.product || ""}
+                  onChange={(e) => handleInputChange("product", e.target.value)}
+                  disabled={dialogMode === "view"}
+                  placeholder="Enter product name"
+                />
+              </FormField>
+
+              <FormField
+                label="Cement Grade"
+                fieldName="grade"
+                required
+                helpText="Cement configuration and performance standard."
+              >
+                {dialogMode === "view" ? (
+                  <input type="text" value={formValues.grade || ""} disabled readOnly />
+                ) : (
+                  <select
+                    value={formValues.grade || ""}
+                    onChange={(e) => handleInputChange("grade", e.target.value)}
+                  >
+                    <option value="53 Grade">53 Grade</option>
+                    <option value="43 Grade">43 Grade</option>
+                    <option value="PSC">PSC</option>
+                    <option value="PPC">PPC</option>
+                    <option value="Premium">Premium</option>
+                  </select>
+                )}
+              </FormField>
+
+              <FormField
+                label="Version Revision"
+                fieldName="version"
+                required
+                helpText="Formulation revision index."
+              >
+                <input
+                  type="text"
+                  value={formValues.version || ""}
+                  onChange={(e) => handleInputChange("version", e.target.value)}
+                  disabled={dialogMode === "view"}
+                  placeholder="e.g. v3.2"
+                />
+              </FormField>
+            </FormGrid>
+          </FormSection>
+
+          <FormSection title="Cost & Composition Details">
+            <FormGrid cols={2}>
+              <FormField
+                label="Ingredients Count"
+                fieldName="materials"
+                required
+                error={validationErrors.materials}
+                success={formValues.materials && !validationErrors.materials && dialogMode !== "view"}
+                helpText="Count of raw materials in mixture."
+              >
+                <input
+                  type="number"
+                  value={formValues.materials || ""}
+                  onChange={(e) => handleInputChange("materials", e.target.value)}
+                  disabled={dialogMode === "view"}
+                  placeholder="e.g. 7"
+                />
+              </FormField>
+
+              <FormField
+                label="Cost Per Bag"
+                fieldName="cost"
+                required
+                error={validationErrors.costPerUnit}
+                success={formValues.costPerUnit && !validationErrors.costPerUnit && dialogMode !== "view"}
+                helpText="Calculated raw constituent cost in INR per unit."
+              >
+                <input
+                  type="number"
+                  value={formValues.costPerUnit || ""}
+                  onChange={(e) => handleInputChange("costPerUnit", e.target.value)}
+                  disabled={dialogMode === "view"}
+                  placeholder="e.g. 280"
+                />
+              </FormField>
+
+              <FormField
+                label="Created By"
+                fieldName="createdBy"
+                helpText="Responsible author."
+              >
+                <input
+                  type="text"
+                  value={formValues.createdBy || ""}
+                  onChange={(e) => handleInputChange("createdBy", e.target.value)}
+                  disabled={dialogMode === "view"}
+                />
+              </FormField>
+
+              <FormField
+                label="Status"
+                fieldName="status"
+                helpText="Control availability of recipe."
+              >
+                {dialogMode === "view" ? (
+                  <input type="text" value={formValues.status || ""} disabled readOnly />
+                ) : (
+                  <select
+                    value={formValues.status || ""}
+                    onChange={(e) => handleInputChange("status", e.target.value)}
+                  >
+                    <option value="active">Active</option>
+                    <option value="draft">Draft</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                )}
+              </FormField>
+            </FormGrid>
+          </FormSection>
+
+          <button type="submit" className="hidden" />
+        </form>
+
+        <FormFooter>
+          <ActionButtons
+            onCancel={() => setIsDialogOpen(false)}
+            submitLabel={
+              dialogMode === "create"
+                ? "Create BOM"
+                : dialogMode === "edit"
+                ? "Save Changes"
+                : "Close"
+            }
+            onSubmit={handleFormSubmit}
+          />
+        </FormFooter>
+      </FormDialog>
     </div>
   );
 }
