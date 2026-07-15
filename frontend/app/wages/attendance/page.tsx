@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { attendanceKpis, attendanceList, type WagesKpi, type WorkerAttendance } from "@/data/wages-data";
 import { useApi } from "@/hooks/use-api";
+import { exportCsv } from "@/lib/export";
 import { apiSend } from "@/lib/api";
 import { RecordModal } from "@/components/ui/record-modal";
 
@@ -173,7 +174,7 @@ export default function AttendancePage() {
           </select>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
+          <button onClick={() => exportCsv("attendance-timesheet", filtered, [["id","Worker ID"],["name","Name"],["date","Date"],["shift","Shift"],["inTime","In"],["outTime","Out"],["workingHours","Hours"],["otHours","OT Hours"],["status","Status"]])} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
             <Download className="w-3.5 h-3.5" />
             Export Timesheet
           </button>

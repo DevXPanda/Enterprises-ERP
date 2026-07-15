@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { productionOrdersKpis, productionOrders, type MfgKpi, type ProductionOrder } from "@/data/manufacturing-data";
 import { useApi } from "@/hooks/use-api";
+import { exportCsv } from "@/lib/export";
 import { apiSend } from "@/lib/api";
 import { RecordModal } from "@/components/ui/record-modal";
 
@@ -129,7 +130,7 @@ export default function ProductionOrdersPage() {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all"><Filter className="w-3.5 h-3.5" />Filter</button>
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all"><Download className="w-3.5 h-3.5" />Export</button>
+          <button onClick={() => exportCsv("production-orders", filtered, [["id","Order ID"],["product","Product"],["grade","Grade"],["quantity","Qty"],["unit","Unit"],["priority","Priority"],["line","Line"],["startDate","Start"],["dueDate","Due"],["progress","Progress %"],["status","Status"]])} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all"><Download className="w-3.5 h-3.5" />Export</button>
           <button onClick={() => setModal("create")} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all"><Plus className="w-3.5 h-3.5" />New Order</button>
         </div>
       </div>

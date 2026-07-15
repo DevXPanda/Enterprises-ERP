@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { jobCardsKpis, jobCards, type MfgKpi, type JobCard } from "@/data/manufacturing-data";
 import { useApi } from "@/hooks/use-api";
+import { exportCsv } from "@/lib/export";
 import { apiSend } from "@/lib/api";
 import { RecordModal } from "@/components/ui/record-modal";
 import { Pencil, Trash2 } from "lucide-react";
@@ -189,7 +190,7 @@ export default function JobCardsPage() {
             <Filter className="w-3.5 h-3.5" />
             Filter
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
+          <button onClick={() => exportCsv("job-cards", filtered, [["id","Card ID"],["task","Task"],["machine","Machine"],["operator","Operator"],["shift","Shift"],["startTime","Start"],["endTime","End"],["output","Output"],["target","Target"],["status","Status"]])} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
             <Download className="w-3.5 h-3.5" />
             Export
           </button>

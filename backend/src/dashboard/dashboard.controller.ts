@@ -1,5 +1,5 @@
 // Static dashboard and health routes.
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 
 @Controller()
@@ -19,5 +19,15 @@ export class DashboardController {
   @Get('factory/dashboard')
   factory() {
     return this.service.factory();
+  }
+
+  @Get('search')
+  search(@Query('q') q?: string) {
+    return this.service.search(q ?? '');
+  }
+
+  @Get('notifications')
+  notifications() {
+    return this.service.notifications();
   }
 }

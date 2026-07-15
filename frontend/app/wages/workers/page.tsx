@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { workersKpis, workersList, type WagesKpi, type Worker } from "@/data/wages-data";
 import { useApi } from "@/hooks/use-api";
+import { exportCsv } from "@/lib/export";
 import { apiSend } from "@/lib/api";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -181,7 +182,7 @@ export default function WorkersPage() {
             <Filter className="w-3.5 h-3.5" />
             Filter
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
+          <button onClick={() => exportCsv("workers-directory", filtered, [["id","Worker ID"],["name","Name"],["department","Department"],["type","Type"],["dailyRate","Daily Rate"],["bankAccount","Bank Account"],["attendancePct","Attendance %"],["status","Status"]])} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
             <Download className="w-3.5 h-3.5" />
             Export Directory
           </button>

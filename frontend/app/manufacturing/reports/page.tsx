@@ -42,6 +42,7 @@ import {
   type MfgKpi,
 } from "@/data/manufacturing-data";
 import { useApi } from "@/hooks/use-api";
+import { exportSections } from "@/lib/export";
 
 interface MfgReportsAnalytics {
   kpis: MfgKpi[];
@@ -165,7 +166,7 @@ export default function ManufacturingReportsPage() {
             <Filter className="w-3.5 h-3.5" />
             Filter Charts
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button onClick={() => exportSections("manufacturing-dossier", [{ title: "Monthly Production", rows: monthlyProd, cols: [["month","Month"],["production","Production"],["target","Target"]] }, { title: "OEE by Line", rows: oeeLines, cols: [["line","Line"],["availability","Availability"],["performance","Performance"],["quality","Quality"],["oee","OEE"]] }, { title: "Downtime Breakdown", rows: downtime, cols: [["reason","Reason"],["hours","Hours"]] }])} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
             <Download className="w-3.5 h-3.5" />
             Export Monthly Dossier
           </button>

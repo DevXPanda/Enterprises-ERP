@@ -42,6 +42,7 @@ import {
   type WagesKpi,
 } from "@/data/wages-data";
 import { useApi } from "@/hooks/use-api";
+import { exportSections } from "@/lib/export";
 
 interface WagesReportsAnalytics {
   kpis: WagesKpi[];
@@ -164,7 +165,7 @@ export default function WagesReportsPage() {
             <Filter className="w-3.5 h-3.5" />
             Filter Data
           </button>
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
+          <button onClick={() => exportSections("wages-dossier", [{ title: "Monthly Wage Cost (Lakhs)", rows: monthlyCosts, cols: [["month","Month"],["cost","Cost"],["target","Target"]] }, { title: "Overtime Trend", rows: otTrend, cols: [["month","Month"],["overtimeHours","OT Hours"],["cost","Cost (K)"]] }, { title: "Cost by Category", rows: catCost, cols: [["category","Category"],["cost","Cost"]] }])} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-primary hover:bg-primary-dark transition-all">
             <Download className="w-3.5 h-3.5" />
             Export Wages Dossier
           </button>

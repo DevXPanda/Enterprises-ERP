@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { bomKpis, bomItems, type MfgKpi, type BomItem } from "@/data/manufacturing-data";
 import { useApi } from "@/hooks/use-api";
+import { exportCsv } from "@/lib/export";
 import { apiSend } from "@/lib/api";
 import { RecordModal } from "@/components/ui/record-modal";
 import { Pencil, Trash2 } from "lucide-react";
@@ -191,7 +192,7 @@ export default function BomPage() {
             <Filter className="w-3.5 h-3.5" />
             Filter
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
+          <button onClick={() => exportCsv("bom-list", filtered, [["id","BOM ID"],["product","Product"],["grade","Grade"],["version","Version"],["materials","Materials"],["costPerUnit","Cost/Bag"],["lastUpdated","Last Updated"],["createdBy","Created By"],["status","Status"]])} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
             <Download className="w-3.5 h-3.5" />
             Export
           </button>

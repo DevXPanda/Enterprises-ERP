@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { payrollKpis, payrollList, type WagesKpi, type PayrollRow } from "@/data/wages-data";
 import { useApi } from "@/hooks/use-api";
+import { exportCsv } from "@/lib/export";
 import { apiSend } from "@/lib/api";
 import { RecordModal } from "@/components/ui/record-modal";
 
@@ -169,7 +170,7 @@ export default function PayrollPage() {
             <Filter className="w-3.5 h-3.5" />
             Tax Rules
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
+          <button onClick={() => exportCsv("payslips", filtered, [["payoutId","Payout ID"],["workerId","Worker ID"],["name","Name"],["baseWages","Base Wages"],["overtimePay","Overtime"],["deductions","Deductions"],["bonuses","Bonuses"],["netPayable","Net Payable"],["status","Status"]])} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-muted border border-border/40 bg-card/40 hover:bg-white/5 hover:text-white transition-all">
             <Download className="w-3.5 h-3.5" />
             Export Payslips
           </button>
