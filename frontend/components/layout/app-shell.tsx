@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
 import { cn } from "@/lib/utils";
+import { apiSend } from "@/lib/api";
 import {
   Lock,
   Mail,
@@ -23,8 +24,8 @@ export function AppShell({ children }: AppShellProps) {
   // Auth State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [email, setEmail] = useState("admin@nktech.in");
-  const [password, setPassword] = useState("admin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,26 +43,37 @@ export function AppShell({ children }: AppShellProps) {
     setCheckingAuth(false);
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
-    // Simulate network authentication request
-    setTimeout(() => {
-      if (email.toLowerCase() === "admin@nktech.in" && password === "admin") {
-        localStorage.setItem("admin_logged_in", "true");
-        setIsLoggedIn(true);
-        setError(null);
-      } else {
-        setError("Invalid admin credentials. Please use email: admin@nktech.in and password: admin");
-      }
+    try {
+      const res = await apiSend<{
+        success: boolean;
+        token: string;
+        admin: { email: string; name: string; role: string };
+      }>("POST", "/auth/login", { email, password });
+      localStorage.setItem("admin_logged_in", "true");
+      localStorage.setItem("admin_token", res.token);
+      localStorage.setItem("admin_email", res.admin.email);
+      localStorage.setItem("admin_name", res.admin.name);
+      setIsLoggedIn(true);
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message !== "Failed to fetch"
+          ? err.message
+          : "Cannot reach the server. Is the backend running on port 4000?",
+      );
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem("admin_logged_in");
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_email");
+    localStorage.removeItem("admin_name");
     setIsLoggedIn(false);
   }, []);
 
@@ -139,7 +151,7 @@ export function AppShell({ children }: AppShellProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-navy/60 border border-border/40 rounded-xl text-xs text-white placeholder:text-muted/30 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                  placeholder="admin@nktech.in"
+                  placeholder="Enter admin email"
                   required
                 />
               </div>
@@ -155,7 +167,7 @@ export function AppShell({ children }: AppShellProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 bg-navy/60 border border-border/40 rounded-xl text-xs text-white placeholder:text-muted/30 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                  placeholder="admin"
+                  placeholder="Enter password"
                   required
                 />
                 <button
@@ -206,13 +218,6 @@ export function AppShell({ children }: AppShellProps) {
             </button>
           </form>
 
-          {/* Setup Instructions Tip */}
-          <div className="pt-2 text-center">
-            <p className="text-[10px] text-muted/65 leading-relaxed bg-navy-50/40 p-2.5 rounded-xl border border-border/10">
-              <span className="font-semibold text-white/80 block mb-0.5">Quick Demo Access</span>
-              Username: <span className="font-mono text-white/90">admin@nktech.in</span> · Password: <span className="font-mono text-white/90">admin</span>
-            </p>
-          </div>
         </div>
       </div>
     );

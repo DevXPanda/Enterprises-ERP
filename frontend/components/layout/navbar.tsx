@@ -15,9 +15,18 @@ import {
   Settings,
 } from "lucide-react";
 
+import { apiGet } from "@/lib/api";
+
 interface NavbarProps {
   onMenuClick?: () => void;
   onLogout?: () => void;
+}
+
+interface NavProfile {
+  name: string;
+  email: string;
+  role: string;
+  avatarUrl: string | null;
 }
 
 export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
@@ -25,6 +34,16 @@ export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [profile, setProfile] = useState<NavProfile | null>(null);
+
+  // Load the admin profile (name + avatar); refresh when Settings saves it.
+  useEffect(() => {
+    const load = () =>
+      apiGet<NavProfile>("/settings/profile").then(setProfile).catch(() => {});
+    load();
+    window.addEventListener("profile-updated", load);
+    return () => window.removeEventListener("profile-updated", load);
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "dark" | "light";
@@ -151,12 +170,18 @@ export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
               className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-all ml-1 text-left"
               title="View Admin Profile"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-primary to-purple flex items-center justify-center">
+                {profile?.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-4 h-4 text-white" />
+                )}
               </div>
               <div className="hidden md:block">
-                <p className="text-xs font-medium text-white leading-tight">Admin</p>
-                <p className="text-[10px] text-muted leading-tight">Super Admin</p>
+                <p className="text-xs font-medium text-white leading-tight">
+                  {profile?.name?.split(" ")[0] ?? "Admin"}
+                </p>
+                <p className="text-[10px] text-muted leading-tight">{profile?.role ?? "Super Admin"}</p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-muted hidden md:block" />
             </button>
@@ -169,10 +194,10 @@ export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
                 {/* Dropdown Popover */}
                 <div className="absolute right-0 mt-2 w-56 bg-card/95 border border-border/50 rounded-2xl shadow-xl p-2 z-50 animate-slide-in backdrop-blur-xl">
                   <div className="px-3 py-2">
-                    <p className="text-xs font-semibold text-white">Kushal Sharma</p>
-                    <p className="text-[10px] text-muted">admin@nktech.in</p>
+                    <p className="text-xs font-semibold text-white">{profile?.name ?? "Admin"}</p>
+                    <p className="text-[10px] text-muted">{profile?.email ?? ""}</p>
                     <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide bg-primary/15 text-primary-light">
-                      Super Admin
+                      {profile?.role ?? "Super Admin"}
                     </span>
                   </div>
                   <div className="h-px bg-border/20 my-2" />

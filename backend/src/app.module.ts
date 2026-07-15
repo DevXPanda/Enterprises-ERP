@@ -8,7 +8,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { WagesModule } from './wages/wages.module';
 import { ManufacturingModule } from './manufacturing/manufacturing.module';
 import { SettingsModule } from './settings/settings.module';
-import { AppUserEntity } from './settings/user.entity';
+import { AuthModule } from './auth/auth.module';
+import { SuperAdminEntity } from './auth/super-admin.entity';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { AppUserEntity } from './settings/user.entity';
         type: 'postgres',
         url: config.get<string>('DATABASE_URL'),
         ssl: { rejectUnauthorized: false },
-        entities: [...entitySchemas, AppUserEntity],
+        entities: [...entitySchemas, SuperAdminEntity],
         synchronize: true,
       }),
     }),
@@ -28,6 +29,7 @@ import { AppUserEntity } from './settings/user.entity';
     WagesModule,
     ManufacturingModule,
     SettingsModule,
+    AuthModule,
     ResourcesModule,
   ],
 })

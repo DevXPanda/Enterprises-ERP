@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { json } from 'express';
 import { AppModule } from './app.module';
 
 const REQUIRED_ENV = ['DATABASE_URL', 'PORT', 'TENANT_ID'];
@@ -15,6 +16,7 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
+  app.use(json({ limit: '5mb' }));
   app.setGlobalPrefix('api');
   app.enableCors({ origin: true, credentials: true });
 

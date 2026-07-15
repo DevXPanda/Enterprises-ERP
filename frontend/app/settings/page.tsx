@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Save,
   CheckCircle,
@@ -76,6 +76,7 @@ export default function SettingsPage() {
         setNewPassword("");
         setConfirmPassword("");
       }
+      window.dispatchEvent(new Event("profile-updated")); // navbar refreshes avatar/name
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -85,9 +86,29 @@ export default function SettingsPage() {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const handlePhotoUpload = () => {
-    // Mock image upload
-    setAvatarUrl("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80");
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setError(null);
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)) {
+      setError("Please choose a PNG, JPG, WEBP or GIF image.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image is too large — maximum size is 2 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setAvatarUrl(String(reader.result)); // data URL, saved to DB on Save
+    reader.onerror = () => setError("Could not read the selected image.");
+    reader.readAsDataURL(file);
   };
 
   const handlePhotoRemove = () => {
@@ -155,6 +176,13 @@ export default function SettingsPage() {
                 <p className="text-xs font-semibold text-white">Profile Photo</p>
                 <p className="text-[10px] text-muted">Recommend PNG or JPG (min. 150x150px)</p>
                 <div className="flex items-center justify-center sm:justify-start gap-2 pt-1">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleFileSelected}
+                    className="hidden"
+                  />
                   <button
                     type="button"
                     onClick={handlePhotoUpload}
@@ -265,7 +293,7 @@ export default function SettingsPage() {
                     type={showPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Min. 8 characters"
+                    placeholder="Min. 6 characters"
                     className="w-full px-3.5 py-2 bg-navy/60 border border-border/40 rounded-xl text-xs text-white placeholder:text-muted/30 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
                   />
                   <button
