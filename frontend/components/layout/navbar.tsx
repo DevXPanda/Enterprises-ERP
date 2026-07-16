@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Bell,
   Search,
@@ -208,9 +209,13 @@ export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="text-base font-semibold text-white hidden sm:block">
+          <Link
+            href="/"
+            className="text-sm sm:text-base font-semibold text-white hover:text-white/90 active:scale-[0.98] transition-all select-none"
+            aria-label="NKTech Enterprises Home"
+          >
             NKTech Enterprises
-          </h1>
+          </Link>
           <span className="hidden lg:flex items-center gap-1.5 text-xs text-muted bg-card/50 px-2.5 py-1 rounded-lg border border-border/30">
             <Calendar className="w-3.5 h-3.5" />
             {today}

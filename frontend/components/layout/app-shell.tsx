@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
 import { cn } from "@/lib/utils";
@@ -31,9 +32,51 @@ export function AppShell({ children }: AppShellProps) {
   const [loading, setLoading] = useState(false);
 
   // Layout State
+  const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["manufacturing"]);
+
+  // Auto-expand parent menus of the active route on navigation
+  useEffect(() => {
+    setExpandedMenus((prev) => {
+      const next = [...prev];
+      let updated = false;
+
+      const addKey = (key: string) => {
+        if (!next.includes(key)) {
+          next.push(key);
+          updated = true;
+        }
+      };
+
+      if (pathname.startsWith("/wages")) {
+        addKey("wages");
+      }
+      if (pathname.startsWith("/factory")) {
+        addKey("factory");
+        if (pathname.startsWith("/factory/smart-access")) addKey("smart-access");
+        if (pathname.startsWith("/factory/employee-management")) addKey("factory-emp-mgmt");
+        if (pathname.startsWith("/factory/attendance")) addKey("factory-attendance");
+        if (pathname.startsWith("/factory/visitor-management")) addKey("visitor-management");
+        if (pathname.startsWith("/factory/material-gate")) addKey("material-gate");
+        if (pathname.startsWith("/factory/production")) addKey("factory-production");
+        if (pathname.startsWith("/factory/quality-control")) addKey("quality-control");
+        if (pathname.startsWith("/factory/store")) addKey("store");
+        if (pathname.startsWith("/factory/dispatch")) addKey("factory-dispatch");
+        if (pathname.startsWith("/factory/reports")) addKey("factory-reports");
+        if (pathname.startsWith("/factory/tally-connector")) addKey("tally-connector");
+      }
+      if (pathname.startsWith("/manufacturing")) {
+        addKey("manufacturing");
+      }
+      if (pathname.startsWith("/settings")) {
+        addKey("settings");
+      }
+
+      return updated ? next : prev;
+    });
+  }, [pathname]);
 
   useEffect(() => {
     const status = localStorage.getItem("admin_logged_in");

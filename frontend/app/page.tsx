@@ -20,7 +20,13 @@ import {
   IndianRupee,
   Bell,
   ArrowUpRight,
+  LayoutDashboard,
+  Wallet,
+  Building2,
+  Factory,
+  Settings,
 } from "lucide-react";
+import Link from "next/link";
 
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { ChartCard } from "@/components/dashboard/chart-card";
@@ -133,7 +139,70 @@ export default function DashboardPage() {
   } = dash;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Quick Access Section (Mobile Only) */}
+      <div className="md:hidden space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted/70">
+          Quick Access
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Link
+            href="/"
+            className="flex flex-col items-start p-4 bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 select-none group text-left"
+          >
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-full mb-3 shrink-0 group-hover:bg-blue-100 transition-colors">
+              <LayoutDashboard className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-semibold text-[#0F172A]">Dashboard</span>
+            <span className="text-[10px] text-[#64748B] mt-0.5">System Overview</span>
+          </Link>
+
+          <Link
+            href="/wages/dashboard"
+            className="flex flex-col items-start p-4 bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 select-none group text-left"
+          >
+            <div className="p-2 bg-green-50 text-green-600 rounded-full mb-3 shrink-0 group-hover:bg-green-100 transition-colors">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-semibold text-[#0F172A]">Wages</span>
+            <span className="text-[10px] text-[#64748B] mt-0.5">Employee & Payroll</span>
+          </Link>
+
+          <Link
+            href="/factory/dashboard"
+            className="flex flex-col items-start p-4 bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 select-none group text-left"
+          >
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-full mb-3 shrink-0 group-hover:bg-purple-100 transition-colors">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-semibold text-[#0F172A]">Factory</span>
+            <span className="text-[10px] text-[#64748B] mt-0.5">Factory Operations</span>
+          </Link>
+
+          <Link
+            href="/manufacturing/dashboard"
+            className="flex flex-col items-start p-4 bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 select-none group text-left"
+          >
+            <div className="p-2 bg-orange-50 text-orange-600 rounded-full mb-3 shrink-0 group-hover:bg-orange-100 transition-colors">
+              <Factory className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-semibold text-[#0F172A]">Manufacturing</span>
+            <span className="text-[10px] text-[#64748B] mt-0.5">Production Management</span>
+          </Link>
+
+          <Link
+            href="/settings/dashboard"
+            className="flex flex-col items-start p-4 bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 select-none group text-left col-span-2"
+          >
+            <div className="p-2 bg-slate-100 text-slate-600 rounded-full mb-3 shrink-0 group-hover:bg-slate-200 transition-colors">
+              <Settings className="w-5 h-5" />
+            </div>
+            <span className="text-sm font-semibold text-[#0F172A]">Settings</span>
+            <span className="text-[10px] text-[#64748B] mt-0.5">System Configuration</span>
+          </Link>
+        </div>
+      </div>
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -176,6 +177,13 @@ const iconMap: Record<string, React.ReactNode> = {
   "failed-txns": <AlertCircle className="w-4 h-4 shrink-0" />,
   "retry-queue": <RotateCcw className="w-4 h-4 shrink-0" />,
   "error-logs": <Database className="w-4 h-4 shrink-0" />,
+
+  // --- Settings children ---
+  "settings-dashboard": <LayoutDashboard className="w-4 h-4 shrink-0" />,
+  "company-settings": <Settings className="w-4 h-4 shrink-0" />,
+  "user-management": <Users className="w-4 h-4 shrink-0" />,
+  "roles-permissions": <ShieldCheck className="w-4 h-4 shrink-0" />,
+  "profile": <UserCheck className="w-4 h-4 shrink-0" />,
 };
 
 // Leaf item — deepest level, always a route
@@ -210,19 +218,6 @@ const menuItems: MenuItem[] = [
     label: "Dashboard",
     href: "/",
     icon: "dashboard",
-  },
-  {
-    key: "manufacturing",
-    label: "Manufacturing",
-    icon: "manufacturing",
-    children: [
-      { key: "mfg-dashboard", label: "Dashboard", href: "/manufacturing/dashboard", icon: "mfg-dashboard" },
-      { key: "production-orders", label: "Production Orders", href: "/manufacturing/production-orders", icon: "production-orders" },
-      { key: "bom", label: "BOM", href: "/manufacturing/bom", icon: "bom" },
-      { key: "job-cards", label: "Job Cards", href: "/manufacturing/job-cards", icon: "job-cards" },
-      { key: "machines", label: "Machines", href: "/manufacturing/machines", icon: "machines" },
-      { key: "mfg-reports", label: "Reports", href: "/manufacturing/reports", icon: "reports" },
-    ],
   },
   {
     key: "wages",
@@ -405,10 +400,29 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    key: "manufacturing",
+    label: "Manufacturing",
+    icon: "manufacturing",
+    children: [
+      { key: "mfg-dashboard", label: "Dashboard", href: "/manufacturing/dashboard", icon: "mfg-dashboard" },
+      { key: "production-orders", label: "Production Orders", href: "/manufacturing/production-orders", icon: "production-orders" },
+      { key: "bom", label: "BOM", href: "/manufacturing/bom", icon: "bom" },
+      { key: "job-cards", label: "Job Cards", href: "/manufacturing/job-cards", icon: "job-cards" },
+      { key: "machines", label: "Machines", href: "/manufacturing/machines", icon: "machines" },
+      { key: "mfg-reports", label: "Reports", href: "/manufacturing/reports", icon: "reports" },
+    ],
+  },
+  {
     key: "settings",
     label: "Settings",
-    href: "/settings",
     icon: "settings",
+    children: [
+      { key: "settings-dashboard", label: "Dashboard", href: "/settings/dashboard", icon: "settings-dashboard" },
+      { key: "company-settings", label: "Company Settings", href: "/settings/company", icon: "company-settings" },
+      { key: "user-management", label: "User Management", href: "/settings/users", icon: "user-management" },
+      { key: "roles-permissions", label: "Roles & Permissions", href: "/settings/roles", icon: "roles-permissions" },
+      { key: "profile", label: "Profile", href: "/settings/profile", icon: "profile" },
+    ],
   },
 ];
 
@@ -422,6 +436,23 @@ export function Sidebar({
   onLogout,
 }: SidebarProps) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLDivElement | null>(null);
+
+  // On mobile viewports, the sidebar is never collapsed
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const collapsed = isCollapsed && !isMobile && !isMobileOpen;
+
+  useEffect(() => {
+    if (expandedMenus.length > 0) {
+      const lastKey = expandedMenus[expandedMenus.length - 1];
+      const element = navRef.current?.querySelector(`[data-menu-key="${lastKey}"]`);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 150);
+      }
+    }
+  }, [expandedMenus]);
 
   const isActive = (href?: string) => {
     if (!href) return false;
@@ -448,11 +479,11 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 h-screen z-40 flex flex-col",
+        "fixed left-0 top-0 h-[100dvh] md:h-screen z-40 flex flex-col",
         "bg-sidebar border-r border-border/30",
         "transition-transform md:transition-all duration-300 ease-in-out",
         "w-[260px]",
-        isCollapsed ? "md:w-[68px]" : "md:w-[260px]",
+        collapsed ? "md:w-[68px]" : "md:w-[260px]",
         isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}
       role="navigation"
@@ -464,7 +495,7 @@ export function Sidebar({
           <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shrink-0 bg-white/10">
             <img src="/logo.png" alt="NK Tech Logo" className="w-full h-full object-contain" />
           </div>
-          {!isCollapsed && (
+          {!collapsed && (
             <div className="overflow-hidden animate-fade-in">
               <p className="text-sm font-bold text-white leading-tight truncate">
                 NKTech ERP
@@ -477,11 +508,11 @@ export function Sidebar({
         </div>
         <button
           onClick={toggleSidebar}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-muted hover:text-white hover:bg-white/10 transition-all duration-200"
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="w-7 h-7 hidden md:flex items-center justify-center rounded-lg text-muted hover:text-white hover:bg-white/10 transition-all duration-200"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {isCollapsed ? (
+          {collapsed ? (
             <Menu className="w-4.5 h-4.5" />
           ) : (
             <Menu className="w-4.5 h-4.5" />
@@ -490,9 +521,9 @@ export function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      <nav ref={navRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {menuItems.map((item) => (
-          <div key={item.key}>
+          <div key={item.key} data-menu-key={item.key}>
             {item.children ? (
               /* Parent with children */
               <>
@@ -506,7 +537,7 @@ export function Sidebar({
                   aria-label={`Toggle ${item.label} menu`}
                 >
                   {iconMap[item.icon]}
-                  {!isCollapsed && (
+                  {!collapsed && (
                     <>
                       <span className="flex-1 text-left">{item.label}</span>
                       <ChevronDown
@@ -520,12 +551,12 @@ export function Sidebar({
                 </button>
 
                 {/* Level-2 children — either a direct link OR a collapsible section */}
-                {!isCollapsed && expandedMenus.includes(item.key) && (
+                {!collapsed && expandedMenus.includes(item.key) && (
                   <div className="mt-1 space-y-0.5 animate-slide-in">
                     {item.children.map((child) =>
                       child.children ? (
                         /* ── Collapsible section (level-2 parent, e.g. "Employee Management") */
-                        <div key={child.key}>
+                        <div key={child.key} data-menu-key={child.key}>
                           <button
                             onClick={() => toggleMenu(child.key)}
                             className={cn(
@@ -609,7 +640,7 @@ export function Sidebar({
                     <span className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-primary rounded-r animate-fade-in" />
                   )}
                   {iconMap[item.icon]}
-                  {!isCollapsed && <span>{item.label}</span>}
+                  {!collapsed && <span>{item.label}</span>}
                 </Link>
               )}
           </div>
@@ -617,7 +648,7 @@ export function Sidebar({
       </nav>
 
       {/* Footer info */}
-      {!isCollapsed ? (
+      {!collapsed ? (
         <div className="px-5 py-4 border-t border-border/20 shrink-0 text-[11px] text-muted/60 space-y-0.5 animate-fade-in">
           <p className="font-semibold text-white/70">NKTech Enterprises</p>
           <div className="flex items-center justify-between">

@@ -234,34 +234,14 @@ export function FormGrid({ children, cols = 2, className }: FormGridProps) {
 
 export interface FormFieldProps {
   label: string;
-  fieldName?: string; // Key name used to automatically resolve input icons
+  fieldName?: string; // Kept for backwards compatibility but not used for inner input icons
   required?: boolean;
   error?: string;
   success?: boolean;
   helpText?: string;
-  icon?: React.ReactNode;
+  icon?: React.ReactNode; // Kept for backwards compatibility
   children: React.ReactNode;
   className?: string;
-}
-
-// Lightweight Lucide icon mapping based on common form keys
-export function getFieldIcon(fieldName?: string): React.ReactNode | null {
-  if (!fieldName) return null;
-  const k = fieldName.toLowerCase();
-  
-  if (k.includes("email") || k.includes("mail")) return <Mail className="w-4.5 h-4.5" />;
-  if (k.includes("phone") || k.includes("mobile") || k.includes("contact") || k.includes("tele")) return <Phone className="w-4.5 h-4.5" />;
-  if (k.includes("date") || k === "period" || k.includes("valid") || k.includes("schedule") || k.includes("time")) return <Calendar className="w-4.5 h-4.5" />;
-  if (k.includes("dept") || k.includes("department") || k.includes("branch") || k.includes("factory") || k.includes("plant")) return <Building2 className="w-4.5 h-4.5" />;
-  if (k.includes("name") || k === "operator" || k === "author" || k === "employee" || k === "worker" || k === "customer" || k === "visitor" || k === "user") return <User className="w-4.5 h-4.5" />;
-  if (k.includes("material") || k === "item" || k === "bom" || k.includes("stock") || k.includes("product") || k === "output" || k.includes("ingredient")) return <Package className="w-4.5 h-4.5" />;
-  if (k.includes("machine") || k === "line" || k.includes("asset") || k.includes("eq")) return <Cog className="w-4.5 h-4.5" />;
-  if (k.includes("vehicle") || k === "truck" || k === "transport" || k.includes("exit") || k.includes("entry")) return <Truck className="w-4.5 h-4.5" />;
-  if (k.includes("search") || k === "query") return <Search className="w-4.5 h-4.5" />;
-  if (k.includes("code") || k.includes("no") || k === "id" || k.includes("batch") || k.includes("order") || k.includes("card") || k.includes("receipt") || k.includes("pass")) return <ClipboardList className="w-4.5 h-4.5" />;
-  if (k.includes("status") || k.includes("approval") || k.includes("result") || k === "rating") return <Shield className="w-4.5 h-4.5" />;
-  if (k.includes("cost") || k.includes("rate") || k.includes("wage") || k.includes("pay") || k.includes("amount") || k.includes("incentive") || k.includes("rupee") || k.includes("rs") || k.includes("salary") || k.includes("deduct") || k.includes("payout")) return <IndianRupee className="w-4.5 h-4.5" />;
-  return null;
 }
 
 export function FormField({
@@ -275,8 +255,6 @@ export function FormField({
   children,
   className,
 }: FormFieldProps) {
-  const resolvedIcon = icon || getFieldIcon(fieldName || label);
-  
   let modifiedChildren = children;
 
   // Dynamically inspect children to inject standardized enterprise input styling
@@ -285,16 +263,14 @@ export function FormField({
     const hasPropsClass = (children.props as any).className !== undefined || isStandardTag;
 
     if (hasPropsClass) {
-      const hasIcon = !!resolvedIcon;
       const isTextarea = children.type === "textarea";
       
       const combinedInputClass = cn(
         "w-full bg-navy-200/50 border border-border/40 text-sm text-white placeholder:text-muted/40 transition-all duration-200 outline-none",
         "rounded-xl hover:border-border/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20",
-        isTextarea ? "py-3 min-h-[110px] resize-y" : "h-[48px] px-4",
-        hasIcon ? "pl-11" : "",
-        error ? "border-danger focus:border-danger focus:ring-danger/10 text-danger pr-10" : "",
-        success && !error ? "border-success focus:border-success focus:ring-success/10 pr-10" : "",
+        isTextarea ? "py-3 min-h-[110px] resize-y px-4" : "h-[48px] px-4",
+        error ? "border-danger focus:border-danger focus:ring-danger/10 text-danger" : "",
+        success && !error ? "border-success focus:border-success focus:ring-success/10" : "",
         "disabled:opacity-40 disabled:bg-navy-300/20 disabled:cursor-not-allowed",
         "readOnly:bg-navy-300/10 readOnly:border-border/20 readOnly:cursor-default readOnly:hover:border-border/20",
         (children.props as any).className
@@ -310,39 +286,21 @@ export function FormField({
 
   return (
     <div className={cn("space-y-1.5 flex flex-col justify-start", className)}>
-      {/* Field Label */}
-      <label className="text-[11px] font-semibold text-white/90 flex items-center justify-between tracking-wide uppercase">
+      {/* Field Label: Font weight Medium, size 13px, no auto-uppercase */}
+      <label className="text-[13px] font-medium text-white/90 flex items-center justify-between tracking-wide">
         <span>
           {label}
           {required && (
-            <span className="text-danger ml-1 font-bold" aria-hidden="true">
+            <span className="text-danger ml-0.5 font-medium" aria-hidden="true">
               *
             </span>
           )}
         </span>
       </label>
 
-      {/* Field Input Frame */}
+      {/* Field Input Frame: No inner/leading/trailing icons rendered here */}
       <div className="relative flex items-center w-full">
-        {resolvedIcon && (
-          <div className="absolute left-3.5 text-muted/50 pointer-events-none flex items-center justify-center">
-            {resolvedIcon}
-          </div>
-        )}
-        
         {modifiedChildren}
-
-        {/* Floating status icons */}
-        {error && (
-          <div className="absolute right-3.5 text-danger pointer-events-none flex items-center justify-center animate-fade-in">
-            <AlertTriangle className="w-4 h-4" />
-          </div>
-        )}
-        {success && !error && (
-          <div className="absolute right-3.5 text-success pointer-events-none flex items-center justify-center animate-fade-in">
-            <CheckCircle2 className="w-4 h-4" />
-          </div>
-        )}
       </div>
 
       {/* Status descriptions & instructions */}
@@ -483,3 +441,159 @@ export function EmptyTableState({
     </div>
   );
 }
+
+/* ============================================================================
+   9. REUSABLE SHARED INPUT COMPONENTS
+   ============================================================================ */
+
+export interface EnterpriseInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: string;
+  success?: boolean;
+}
+
+export const EnterpriseInput = React.forwardRef<HTMLInputElement, EnterpriseInputProps>(
+  ({ className, error, success, type = "text", ...props }, ref) => {
+    return (
+      <input
+        ref={ref}
+        type={type}
+        className={cn(
+          "w-full bg-navy-200/50 border border-border/40 text-sm text-white placeholder:text-muted/40 transition-all duration-200 outline-none",
+          "rounded-xl hover:border-border/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20",
+          "h-[48px] px-4",
+          error ? "border-danger focus:border-danger focus:ring-danger/10 text-danger" : "",
+          success && !error ? "border-success focus:border-success focus:ring-success/10" : "",
+          "disabled:opacity-40 disabled:bg-navy-300/20 disabled:cursor-not-allowed",
+          "readOnly:bg-navy-300/10 readOnly:border-border/20 readOnly:cursor-default readOnly:hover:border-border/20",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+EnterpriseInput.displayName = "EnterpriseInput";
+
+export interface EnterpriseSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  error?: string;
+  success?: boolean;
+}
+
+export const EnterpriseSelect = React.forwardRef<HTMLSelectElement, EnterpriseSelectProps>(
+  ({ className, error, success, children, ...props }, ref) => {
+    return (
+      <select
+        ref={ref}
+        className={cn(
+          "w-full bg-navy-200/50 border border-border/40 text-sm text-white placeholder:text-muted/40 transition-all duration-200 outline-none appearance-none pr-10",
+          "rounded-xl hover:border-border/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20",
+          "h-[48px] px-4",
+          error ? "border-danger focus:border-danger focus:ring-danger/10 text-danger" : "",
+          success && !error ? "border-success focus:border-success focus:ring-success/10" : "",
+          "disabled:opacity-40 disabled:bg-navy-300/20 disabled:cursor-not-allowed",
+          "readOnly:bg-navy-300/10 readOnly:border-border/20 readOnly:cursor-default readOnly:hover:border-border/20",
+          className
+        )}
+        style={{
+          backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
+          backgroundPosition: "right 0.75rem center",
+          backgroundSize: "1.25rem",
+          backgroundRepeat: "no-repeat"
+        }}
+        {...props}
+      >
+        {children}
+      </select>
+    );
+  }
+);
+EnterpriseSelect.displayName = "EnterpriseSelect";
+
+export interface EnterpriseTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  error?: string;
+  success?: boolean;
+}
+
+export const EnterpriseTextarea = React.forwardRef<HTMLTextAreaElement, EnterpriseTextareaProps>(
+  ({ className, error, success, ...props }, ref) => {
+    return (
+      <textarea
+        ref={ref}
+        className={cn(
+          "w-full bg-navy-200/50 border border-border/40 text-sm text-white placeholder:text-muted/40 transition-all duration-200 outline-none",
+          "rounded-xl hover:border-border/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20",
+          "py-3 px-4 min-h-[110px] resize-y",
+          error ? "border-danger focus:border-danger focus:ring-danger/10 text-danger" : "",
+          success && !error ? "border-success focus:border-success focus:ring-success/10" : "",
+          "disabled:opacity-40 disabled:bg-navy-300/20 disabled:cursor-not-allowed",
+          "readOnly:bg-navy-300/10 readOnly:border-border/20 readOnly:cursor-default readOnly:hover:border-border/20",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+EnterpriseTextarea.displayName = "EnterpriseTextarea";
+
+export interface EnterpriseDatePickerProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: string;
+  success?: boolean;
+}
+
+export const EnterpriseDatePicker = React.forwardRef<HTMLInputElement, EnterpriseDatePickerProps>(
+  ({ className, error, success, ...props }, ref) => {
+    return (
+      <input
+        ref={ref}
+        type="date"
+        className={cn(
+          "w-full bg-navy-200/50 border border-border/40 text-sm text-white placeholder:text-muted/40 transition-all duration-200 outline-none pr-10",
+          "rounded-xl hover:border-border/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20",
+          "h-[48px] px-4",
+          error ? "border-danger focus:border-danger focus:ring-danger/10 text-danger" : "",
+          success && !error ? "border-success focus:border-success focus:ring-success/10" : "",
+          "disabled:opacity-40 disabled:bg-navy-300/20 disabled:cursor-not-allowed",
+          "readOnly:bg-navy-300/10 readOnly:border-border/20 readOnly:cursor-default readOnly:hover:border-border/20",
+          className
+        )}
+        style={{
+          colorScheme: "dark"
+        }}
+        {...props}
+      />
+    );
+  }
+);
+EnterpriseDatePicker.displayName = "EnterpriseDatePicker";
+
+export interface EnterpriseNumberInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  error?: string;
+  success?: boolean;
+}
+
+export const EnterpriseNumberInput = React.forwardRef<HTMLInputElement, EnterpriseNumberInputProps>(
+  ({ className, error, success, ...props }, ref) => {
+    return (
+      <input
+        ref={ref}
+        type="number"
+        className={cn(
+          "w-full bg-navy-200/50 border border-border/40 text-sm text-white placeholder:text-muted/40 transition-all duration-200 outline-none",
+          "rounded-xl hover:border-border/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20",
+          "h-[48px] px-4",
+          error ? "border-danger focus:border-danger focus:ring-danger/10 text-danger" : "",
+          success && !error ? "border-success focus:border-success focus:ring-success/10" : "",
+          "disabled:opacity-40 disabled:bg-navy-300/20 disabled:cursor-not-allowed",
+          "readOnly:bg-navy-300/10 readOnly:border-border/20 readOnly:cursor-default readOnly:hover:border-border/20",
+          className
+        )}
+        {...props}
+      />
+    );
+  }
+);
+EnterpriseNumberInput.displayName = "EnterpriseNumberInput";
+
+export const EnterpriseFormSection = FormSection;
+export const EnterpriseDialogHeader = FormHeader;
