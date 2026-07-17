@@ -3,7 +3,10 @@
 // Run with:  npm run purge
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import { Client } from 'pg';
+import { Client, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
+
+neonConfig.webSocketConstructor = ws;
 import { registry } from '../resources/registry';
 
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
@@ -11,7 +14,6 @@ dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 async function main() {
   const db = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
   });
   await db.connect();
 

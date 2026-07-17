@@ -66,7 +66,7 @@ interface SidebarProps {
   onLogout?: () => void;
 }
 
-const iconMap: Record<string, React.ReactNode> = {
+export const iconMap: Record<string, React.ReactNode> = {
   // --- Existing modules ---
   dashboard: <LayoutDashboard className="w-5 h-5 shrink-0" />,
   manufacturing: <Factory className="w-5 h-5 shrink-0" />,
@@ -187,7 +187,7 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 // Leaf item — deepest level, always a route
-interface LeafItem {
+export interface LeafItem {
   key: string;
   label: string;
   href: string;
@@ -195,7 +195,7 @@ interface LeafItem {
 }
 
 // Section item — level-2 child: either a direct link OR a collapsible group with leaves
-interface SectionItem {
+export interface SectionItem {
   key: string;
   label: string;
   href?: string;
@@ -204,7 +204,7 @@ interface SectionItem {
 }
 
 // Top-level menu item
-interface MenuItem {
+export interface MenuItem {
   key: string;
   label: string;
   href?: string;
@@ -212,7 +212,7 @@ interface MenuItem {
   children?: SectionItem[];
 }
 
-const menuItems: MenuItem[] = [
+export const menuItems: MenuItem[] = [
   {
     key: "dashboard",
     label: "Dashboard",

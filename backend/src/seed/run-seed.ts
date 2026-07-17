@@ -3,6 +3,11 @@ import 'reflect-metadata';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
+import { neonConfig } from '@neondatabase/serverless';
+import * as neonDriver from '@neondatabase/serverless';
+import ws from 'ws';
+
+neonConfig.webSocketConstructor = ws;
 import { entitySchemas } from '../resources/entity.factory';
 import { registry } from '../resources/registry';
 import { ResourceDef } from '../resources/resource.types';
@@ -22,6 +27,7 @@ async function main() {
 
   const dataSource = new DataSource({
     type: 'postgres',
+  driver: neonDriver,
     url: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
     entities: entitySchemas,

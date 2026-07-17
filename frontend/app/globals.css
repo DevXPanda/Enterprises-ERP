@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* Inter is self-hosted via next/font in app/layout.tsx */
 
 @layer base {
   /* Dynamic enterprise-grade calm light theme tokens (Default) */
@@ -310,7 +310,7 @@ textarea:disabled {
    ============================================================================ */
 
 button, .btn {
-  font-family: 'Inter', sans-serif !important;
+  font-family: var(--font-inter), 'Inter', sans-serif !important;
   border-radius: 12px !important; /* 12px border radius */
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }

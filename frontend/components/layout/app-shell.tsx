@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
+import { MobileSubnav } from "./mobile-subnav";
+import { MobileTabbar } from "./mobile-tabbar";
 import { cn } from "@/lib/utils";
 import { apiSend } from "@/lib/api";
 import {
@@ -269,23 +271,17 @@ export function AppShell({ children }: AppShellProps) {
   // Dashboard Application Layout
   return (
     <div className="min-h-screen bg-navy">
-      {/* Dark backdrop for mobile sidebar */}
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-35 md:hidden animate-fade-in"
-          onClick={closeMobileMenu}
+      <div className="hidden md:block">
+        <Sidebar
+          isCollapsed={isCollapsed}
+          toggleSidebar={toggleSidebar}
+          isMobileOpen={false}
+          closeMobileMenu={closeMobileMenu}
+          expandedMenus={expandedMenus}
+          toggleMenu={toggleMenu}
+          onLogout={handleLogout}
         />
-      )}
-
-      <Sidebar
-        isCollapsed={isCollapsed}
-        toggleSidebar={toggleSidebar}
-        isMobileOpen={isMobileOpen}
-        closeMobileMenu={closeMobileMenu}
-        expandedMenus={expandedMenus}
-        toggleMenu={toggleMenu}
-        onLogout={handleLogout}
-      />
+      </div>
 
       <div
         className={cn(
@@ -295,7 +291,9 @@ export function AppShell({ children }: AppShellProps) {
         )}
       >
         <Navbar onMenuClick={toggleMobileMenu} onLogout={handleLogout} />
-        <main className="p-4 sm:p-6 flex-1 overflow-x-hidden">{children}</main>
+        <MobileSubnav />
+        <main className="p-4 pb-24 sm:p-6 md:pb-6 flex-1 overflow-x-hidden">{children}</main>
+        <MobileTabbar />
       </div>
     </div>
   );

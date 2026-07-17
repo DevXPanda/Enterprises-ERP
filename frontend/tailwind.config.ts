@@ -50,7 +50,8 @@ const config: Config = {
         white: "rgb(var(--text-white-rgb) / <alpha-value>)",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "system-ui", "-apple-system", "sans-serif"],
+        mono: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
         card: "0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05)",

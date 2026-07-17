@@ -202,13 +202,6 @@ export function Navbar({ onMenuClick, onLogout }: NavbarProps) {
       <div className="flex items-center justify-between h-full px-6">
         {/* Left: Company Name */}
         <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={onMenuClick}
-            className="p-1.5 rounded-lg text-muted hover:text-white hover:bg-white/5 transition-all md:hidden"
-            aria-label="Open menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
           <Link
             href="/"
             className="text-sm sm:text-base font-semibold text-white hover:text-white/90 active:scale-[0.98] transition-all select-none"
